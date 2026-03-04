@@ -9,6 +9,7 @@ import { AbaSolicitacoesMensalistas } from './components/AbaSolicitacoesMensalis
 import { StatusConexao } from './components/StatusConexao';
 import { StatusSupabase } from './components/StatusSupabase';
 import { PaginaLogin } from './components/PaginaLogin';
+import { TesteSupabase } from './components/TesteSupabase';
 import { mensalistaService } from './services/mensalistaService';
 import { audioService } from './services/audioService';
 import { syncService } from './services/syncService';
@@ -2574,6 +2575,7 @@ function App() {
           </div>
         </div>
       )}
+      <TesteSupabase />
       {renderToasts()}
       {renderConfirmModal()}
     </div>
