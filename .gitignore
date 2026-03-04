@@ -128,9 +128,51 @@ dist
 # Stores VSCode versions used for testing VSCode extensions
 .vscode-test
 
+
 # yarn v2
 .yarn/cache
 .yarn/unplugged
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+# ========================================
+# Supabase
+# ========================================
+
+# Variáveis de ambiente (NUNCA COMMITAR!)
+.env
+.env.local
+.env.*.local
+
+# Supabase local
+.supabase/
+supabase/.temp/
+
+# Secrets e credenciais
+.supabaserc.local
+supabase/.auth/
+
+# Database credentials
+DB_PASSWORD
+database_password
+
+# Links de projeto (contem URLs sensíveis)
+.supabase/config.json
+
+# Backup automáticos
+*.backup
+*.sql.bak
+
+# Logs Supabase
+supabase/logs/
+
+# ========================================
+# IDE
+# ========================================
+
+.vscode/
+.idea/
+*.swp
+*.swo
+*~

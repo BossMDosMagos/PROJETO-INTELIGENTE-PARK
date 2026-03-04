@@ -1,0 +1,14 @@
+# Supabase Configuration
+# Do NOT commit secrets aqui - use .env.local e variáveis de ambiente
+
+[auth]
+# Será preenchido durante setup
+
+[api]
+# Será preenchido durante setup
+
+[db]
+# Será preenchido durante setup
+
+[functions]
+# Será preenchido durante setup

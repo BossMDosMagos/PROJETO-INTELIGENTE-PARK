@@ -9,7 +9,19 @@
     "build": "vite build",
     "preview": "vite preview",
     "deploy": "npm run build && powershell -ExecutionPolicy Bypass -File ./deploy-gh-pages.ps1",
-    "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0"
+    "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
+    "db:start": "supabase start",
+    "db:stop": "supabase stop",
+    "db:reset": "supabase reset",
+    "db:new-migration": "supabase migration new",
+    "db:migrate": "supabase migration up",
+    "db:pull": "supabase db pull",
+    "db:push": "supabase db push",
+    "db:status": "supabase status",
+    "db:link": "supabase link",
+    "db:login": "supabase login",
+    "db:secrets-pull": "supabase secrets pull",
+    "db:secrets-set": "supabase secrets set"
   },
   "dependencies": {
     "esc-pos-encoder": "^3.0.0",
@@ -24,6 +36,7 @@
     "@vitejs/plugin-react": "^4.2.1",
     "autoprefixer": "^10.4.18",
     "postcss": "^8.4.35",
+    "supabase": "^2.76.16",
     "tailwindcss": "^3.4.1",
     "vite": "^5.1.4",
     "vite-plugin-pwa": "^0.19.0"
