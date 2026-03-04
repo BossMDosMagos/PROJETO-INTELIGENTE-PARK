@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { CheckCircle, XCircle, Clock, Calendar, User, Phone, Car } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { CheckCircle, XCircle, Clock, Calendar, User, Phone, Car, RefreshCw } from 'lucide-react';
 import { mensalistaService } from '../services/mensalistaService';
 import { audioService } from '../services/audioService';
 
@@ -8,6 +8,25 @@ export function AbaSolicitacoesMensalistas() {
   const [filtro, setFiltro] = useState('PENDENTE'); // PENDENTE, ATIVO, INATIVO, TODAS
   const [diasVigencia, setDiasVigencia] = useState(30);
   const [confirmando, setConfirmando] = useState(null);
+
+  // Atualizar lista automaticamente a cada 3 segundos
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setMensalistas(mensalistaService.getAll());
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Também atualizar quando o componente for exibido
+  useEffect(() => {
+    setMensalistas(mensalistaService.getAll());
+  }, [filtro]);
+
+  const handleRecarregar = () => {
+    setMensalistas(mensalistaService.getAll());
+    audioService.sucesso();
+  };
 
   const handleAtivar = (id) => {
     const resultado = mensalistaService.ativar(id, diasVigencia);
@@ -120,7 +139,7 @@ export function AbaSolicitacoesMensalistas() {
       </div>
 
       {/* Filtros */}
-      <div className="flex gap-2 flex-wrap">
+      <div className="flex gap-2 flex-wrap items-center">
         {['PENDENTE', 'ATIVO', 'INATIVO', 'TODAS'].map((status) => (
           <button
             key={status}
@@ -134,6 +153,14 @@ export function AbaSolicitacoesMensalistas() {
             {status}
           </button>
         ))}
+        <button
+          onClick={handleRecarregar}
+          className="ml-auto px-4 py-2 rounded-lg font-semibold transition bg-emerald-500 text-white hover:bg-emerald-600 flex items-center gap-2"
+          title="Recarregar lista"
+        >
+          <RefreshCw className="w-4 h-4" />
+          Recarregar
+        </button>
       </div>
 
       {/* Configuração de Vigência (para ativação) */}
