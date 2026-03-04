@@ -179,7 +179,7 @@ export function PaginaCadastroMensalista() {
                     value={formData.nome}
                     onChange={handleInputChange}
                     placeholder="João da Silva"
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-blue-600 focus:outline-none transition"
+                    className="w-full px-4 py-3 bg-white text-gray-900 border-2 border-gray-300 rounded-xl focus:border-blue-600 focus:outline-none transition"
                     maxLength="60"
                   />
                 </div>
@@ -195,7 +195,7 @@ export function PaginaCadastroMensalista() {
                     value={formData.cpf}
                     onChange={handleInputChange}
                     placeholder="12345678901"
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-blue-600 focus:outline-none transition font-mono"
+                    className="w-full px-4 py-3 bg-white text-gray-900 border-2 border-gray-300 rounded-xl focus:border-blue-600 focus:outline-none transition font-mono"
                     maxLength="11"
                   />
                   <p className="text-xs text-gray-500 mt-1">
@@ -214,7 +214,7 @@ export function PaginaCadastroMensalista() {
                     value={formData.whatsapp}
                     onChange={handleInputChange}
                     placeholder="11987654321"
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-blue-600 focus:outline-none transition font-mono"
+                    className="w-full px-4 py-3 bg-white text-gray-900 border-2 border-gray-300 rounded-xl focus:border-blue-600 focus:outline-none transition font-mono"
                     maxLength="11"
                   />
                   <p className="text-xs text-gray-500 mt-1">
@@ -233,7 +233,7 @@ export function PaginaCadastroMensalista() {
                     value={formData.placa}
                     onChange={handleInputChange}
                     placeholder="ABC-1234"
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-blue-600 focus:outline-none transition font-mono text-lg tracking-widest"
+                    className="w-full px-4 py-3 bg-white text-gray-900 border-2 border-gray-300 rounded-xl focus:border-blue-600 focus:outline-none transition font-mono text-lg tracking-widest"
                     maxLength="8"
                   />
                 </div>
@@ -249,7 +249,7 @@ export function PaginaCadastroMensalista() {
                     value={formData.modelo}
                     onChange={handleInputChange}
                     placeholder="GOL, CIVIC, etc"
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-blue-600 focus:outline-none transition"
+                    className="w-full px-4 py-3 bg-white text-gray-900 border-2 border-gray-300 rounded-xl focus:border-blue-600 focus:outline-none transition"
                     maxLength="30"
                   />
                 </div>
@@ -265,7 +265,7 @@ export function PaginaCadastroMensalista() {
                     value={formData.cor}
                     onChange={handleInputChange}
                     placeholder="BRANCO, PRETO, etc"
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-blue-600 focus:outline-none transition"
+                    className="w-full px-4 py-3 bg-white text-gray-900 border-2 border-gray-300 rounded-xl focus:border-blue-600 focus:outline-none transition"
                     maxLength="20"
                   />
                 </div>
