@@ -7,6 +7,8 @@ import { PaginaCadastroPublico } from './PaginaCadastroPublico';
 import { ModalConviteWhatsApp } from './components/ModalConviteWhatsApp';
 import { AbaSolicitacoesMensalistas } from './components/AbaSolicitacoesMensalistas';
 import { StatusConexao } from './components/StatusConexao';
+import { StatusSupabase } from './components/StatusSupabase';
+import { PaginaLogin } from './components/PaginaLogin';
 import { mensalistaService } from './services/mensalistaService';
 import { audioService } from './services/audioService';
 import { syncService } from './services/syncService';
@@ -157,6 +159,43 @@ function App() {
       setModoCadastroPublico(true);
     }
   }, []);
+
+  // Inicializar Supabase
+  useEffect(() => {
+    const initSupabase = async () => {
+      try {
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+        if (!supabaseUrl || !supabaseAnonKey) {
+          console.warn('⚠️ Variáveis de ambiente Supabase não configuradas');
+          console.warn('Adicione ao .env.local:');
+          console.warn('  VITE_SUPABASE_URL');
+          console.warn('  VITE_SUPABASE_ANON_KEY');
+          return false;
+        }
+
+        const inicializado = await supabaseService.initialize(supabaseUrl, supabaseAnonKey);
+        
+        if (inicializado) {
+          showToast('✅ Conectado ao Supabase', 'success', 2000);
+          
+          // Testar conexão
+          const conexao = await supabaseService.testarConexao();
+          if (conexao.sucesso) {
+            console.log('🎉 Banco de dados conectado com sucesso!');
+          }
+        } else {
+          console.warn('⚠️ Supabase não inicializado. Sistema funcionando em modo offline.');
+        }
+      } catch (erro) {
+        console.error('Erro ao inicializar Supabase:', erro);
+      }
+    };
+
+    initSupabase();
+  }, []);
+
 
   const renderToasts = () => (
     <div className="fixed top-4 right-4 z-[100] w-[min(92vw,360px)] space-y-2">
