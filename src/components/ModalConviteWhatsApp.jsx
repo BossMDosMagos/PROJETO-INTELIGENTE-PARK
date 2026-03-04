@@ -7,7 +7,7 @@ export function ModalConviteWhatsApp({ isOpen, onClose, onEnviar }) {
   const [copiado, setCopiado] = useState(false);
   const [erro, setErro] = useState('');
 
-  const urlCadastro = window.location.origin + window.location.pathname.replace(/\/admin.*/, '/cadastro-mensalista');
+  const urlCadastro = window.location.origin + window.location.pathname.replace(/\/admin.*/, '/?cadastro=1');
 
   const mensagem = `Olá! Para agilizar seu acesso como mensalista, preencha seus dados aqui: ${urlCadastro} Assim que terminar, faremos sua ativação no pátio! 🚗`;
 

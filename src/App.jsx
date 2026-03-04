@@ -3,6 +3,7 @@ import { useLocalStorage } from './useLocalStorage';
 import BluetoothPrinter from './BluetoothPrinter';
 import USBPrinter from './USBPrinter';
 import { PaginaCadastroMensalista } from './components/PaginaCadastroMensalista';
+import { PaginaCadastroPublico } from './PaginaCadastroPublico';
 import { ModalConviteWhatsApp } from './components/ModalConviteWhatsApp';
 import { AbaSolicitacoesMensalistas } from './components/AbaSolicitacoesMensalistas';
 import { StatusConexao } from './components/StatusConexao';
@@ -88,6 +89,7 @@ function App() {
   const [tela, setTela] = useState('home'); // 'home', 'admin', 'login-admin', 'cadastro-mensalista'
   const [abaHome, setAbaHome] = useState('patio'); // 'patio', 'saidas', 'saida-placa', 'mensalistas'
   const [abaAdmin, setAbaAdmin] = useState('home'); // 'home', 'config', 'historico', 'mensalistas'
+  const [modoCadastroPublico, setModoCadastroPublico] = useState(false); // True se acessado via link público
   const [config, setConfig] = useLocalStorage('park-config', CONFIG_PADRAO);
   const [veiculos, setVeiculos] = useLocalStorage('park-veiculos', []);
   const [historico, setHistorico] = useLocalStorage('park-historico', []);
@@ -147,6 +149,14 @@ function App() {
   const cancelarDialogo = () => {
     setConfirmDialog(null);
   };
+
+  // Detectar se foi acessado via link de cadastro público
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.has('cadastro')) {
+      setModoCadastroPublico(true);
+    }
+  }, []);
 
   const renderToasts = () => (
     <div className="fixed top-4 right-4 z-[100] w-[min(92vw,360px)] space-y-2">
@@ -908,6 +918,18 @@ function App() {
 
   // Calcula total em caixa
   const totalEmCaixa = historico.reduce((sum, reg) => sum + reg.valor, 0);
+
+  // MODO CADASTRO PÚBLICO (Via link WhatsApp)
+  if (modoCadastroPublico) {
+    return (
+      <PaginaCadastroPublico 
+        onVoltar={() => {
+          setModoCadastroPublico(false);
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }}
+      />
+    );
+  }
 
   // PÁGINA DE CADASTRO DE MENSALISTA
   if (tela === 'cadastro-mensalista') {
