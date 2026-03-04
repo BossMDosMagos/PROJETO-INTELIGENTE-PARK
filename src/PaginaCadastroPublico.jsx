@@ -8,14 +8,6 @@ import { ArrowLeft } from 'lucide-react';
  * Interface simplificada e segura
  */
 export function PaginaCadastroPublico({ onVoltar }) {
-  const [carregado, setCarregado] = useState(false);
-
-  useEffect(() => {
-    // Scroll para o topo
-    window.scrollTo(0, 0);
-    setCarregado(true);
-  }, []);
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100">
       {/* Header simplificado */}
@@ -49,17 +41,8 @@ export function PaginaCadastroPublico({ onVoltar }) {
           </p>
         </div>
 
-        {carregado && (
-          <PaginaCadastroMensalista
-            emModo="publico"
-            onSucesso={() => {
-              // Mostrar mensagem de sucesso
-              setTimeout(() => {
-                alert('Cadastro realizado com sucesso! Você será contactado em breve.');
-              }, 500);
-            }}
-          />
-        )}
+        {/* Componente de cadastro */}
+        <PaginaCadastroMensalista />
       </div>
 
       {/* Footer */}
