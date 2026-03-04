@@ -1,0 +1,46 @@
+{
+  "hash": "0fd7f9f4",
+  "configHash": "54904a47",
+  "lockfileHash": "84a6f2c5",
+  "browserHash": "db5e6a67",
+  "optimized": {
+    "react": {
+      "src": "../../node_modules/react/index.js",
+      "file": "react.js",
+      "fileHash": "019bad51",
+      "needsInterop": true
+    },
+    "react-dom/client": {
+      "src": "../../node_modules/react-dom/client.js",
+      "file": "react-dom_client.js",
+      "fileHash": "d0ce7d59",
+      "needsInterop": true
+    },
+    "lucide-react": {
+      "src": "../../node_modules/lucide-react/dist/esm/lucide-react.js",
+      "file": "lucide-react.js",
+      "fileHash": "f07cb911",
+      "needsInterop": false
+    },
+    "esc-pos-encoder": {
+      "src": "../../node_modules/esc-pos-encoder/dist/esc-pos-encoder.esm.js",
+      "file": "esc-pos-encoder.js",
+      "fileHash": "4e706de2",
+      "needsInterop": false
+    },
+    "qrcode": {
+      "src": "../../node_modules/qrcode/lib/browser.js",
+      "file": "qrcode.js",
+      "fileHash": "abffac98",
+      "needsInterop": true
+    }
+  },
+  "chunks": {
+    "chunk-B5IN2MUH": {
+      "file": "chunk-B5IN2MUH.js"
+    },
+    "chunk-3WN6VOBL": {
+      "file": "chunk-3WN6VOBL.js"
+    }
+  }
+}
