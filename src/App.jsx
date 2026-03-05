@@ -9,7 +9,6 @@ import { AbaSolicitacoesMensalistas } from './components/AbaSolicitacoesMensalis
 import { StatusConexao } from './components/StatusConexao';
 import { StatusSupabase } from './components/StatusSupabase';
 import { PaginaLogin } from './components/PaginaLogin';
-import { TesteSupabase } from './components/TesteSupabase';
 import { mensalistaService } from './services/mensalistaService';
 import { audioService } from './services/audioService';
 import { syncService } from './services/syncService';
@@ -31,7 +30,10 @@ import {
   AlertTriangle,
   Users,
   MessageCircle,
-  Volume2
+  Volume2,
+  Bell,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 
 // Configurações padrão
@@ -90,6 +92,8 @@ const SENHA_ADMIN = '1234';
 
 function App() {
   const [tela, setTela] = useState('home'); // 'home', 'admin', 'login-admin', 'cadastro-mensalista'
+  const [usuarioAutenticado, setUsuarioAutenticado] = useState(null);
+  const [authCarregando, setAuthCarregando] = useState(true);
   const [abaHome, setAbaHome] = useState('patio'); // 'patio', 'saidas', 'saida-placa', 'mensalistas'
   const [abaAdmin, setAbaAdmin] = useState('home'); // 'home', 'config', 'historico', 'mensalistas'
   const [modoCadastroPublico, setModoCadastroPublico] = useState(false); // True se acessado via link público
@@ -125,6 +129,39 @@ function App() {
   const [confirmDialog, setConfirmDialog] = useState(null);
   const [showModalConvite, setShowModalConvite] = useState(false);
   const [showAlertaMensalista, setShowAlertaMensalista] = useState(null);
+  const [niveisAcessoDisponiveis, setNiveisAcessoDisponiveis] = useState(['OPERADOR']);
+  const [operadoresAdmin, setOperadoresAdmin] = useState([]);
+  const [carregandoOperadores, setCarregandoOperadores] = useState(false);
+  const [salvandoOperador, setSalvandoOperador] = useState(false);
+  const [formOperador, setFormOperador] = useState({
+    operador: '',
+    nomeCompleto: '',
+    senha: '',
+    nivelAcesso: 'OPERADOR'
+  });
+
+  // Estados para Pátios
+  const [patiosAdmin, setPatiosAdmin] = useState([]);
+  const [carregandoPatios, setCarregandoPatios] = useState(false);
+  const [salvandoPatio, setSalvandoPatio] = useState(false);
+  const [formPatio, setFormPatio] = useState({
+    nome: '',
+    endereco: '',
+    cidade: '',
+    estado: '',
+    qtd_vagas: '',
+    telefone: '',
+    email: '',
+    descricao: ''
+  });
+
+  // Estados para navegação do Admin
+  const [secaoAdmin, setSecaoAdmin] = useState(null); // null = menu, ou nome da seção
+
+  // Estados para notificações
+  const [mostrarTotalCaixa, setMostrarTotalCaixa] = useState(true);
+  const [pendenciasMensalistas, setPendenciasMensalistas] = useState(0);
+  const [ultimaVerificacaoPendencias, setUltimaVerificacaoPendencias] = useState(0);
 
   const showToast = (mensagem, tipo = 'info', duracao = 3500) => {
     const id = Date.now() + Math.random();
@@ -161,40 +198,48 @@ function App() {
     }
   }, []);
 
-  // Inicializar Supabase
+  // Inicializar Supabase e restaurar sessão ao recarregar
   useEffect(() => {
-    const initSupabase = async () => {
+    let ativo = true;
+
+    const inicializarAuth = async () => {
       try {
         const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
         const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
         if (!supabaseUrl || !supabaseAnonKey) {
-          console.warn('⚠️ Variáveis de ambiente Supabase não configuradas');
-          console.warn('Adicione ao .env.local:');
-          console.warn('  VITE_SUPABASE_URL');
-          console.warn('  VITE_SUPABASE_ANON_KEY');
-          return false;
+          console.warn('⚠️ Variáveis do Supabase não encontradas');
+          return;
         }
 
         const inicializado = await supabaseService.initialize(supabaseUrl, supabaseAnonKey);
-        
-        if (inicializado) {
-          showToast('✅ Conectado ao Supabase', 'success', 2000);
-          
-          // Testar conexão
-          const conexao = await supabaseService.testarConexao();
-          if (conexao.sucesso) {
-            console.log('🎉 Banco de dados conectado com sucesso!');
-          }
-        } else {
-          console.warn('⚠️ Supabase não inicializado. Sistema funcionando em modo offline.');
+        if (!inicializado) return;
+
+        const usuarioSessao = supabaseService.obterUsuarioAtual();
+        if (ativo && usuarioSessao) {
+          setUsuarioAutenticado(usuarioSessao);
         }
       } catch (erro) {
-        console.error('Erro ao inicializar Supabase:', erro);
+        console.error('❌ Erro ao inicializar autenticação:', erro);
+      } finally {
+        if (ativo) {
+          setAuthCarregando(false);
+        }
       }
     };
 
-    initSupabase();
+    inicializarAuth();
+
+    const unsubscribe = supabaseService.onMudanca(({ tipo, dados }) => {
+      if (tipo === 'auth' && ativo) {
+        setUsuarioAutenticado(dados?.usuario || null);
+      }
+    });
+
+    return () => {
+      ativo = false;
+      if (unsubscribe) unsubscribe();
+    };
   }, []);
 
 
@@ -276,6 +321,55 @@ function App() {
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
   }, []);
+
+  useEffect(() => {
+    if (tela === 'admin' && supabaseService.initialized) {
+      carregarDadosOperadores();
+      carregarPatios();
+      setSecaoAdmin(null); // Reset para menu ao entrar no admin
+    }
+  }, [tela]);
+
+  // Verificar pendências de mensalistas (SEMPRE ATIVO)
+  useEffect(() => {
+    let intervalo;
+
+    const verificarPendencias = async () => {
+      if (supabaseService.initialized) {
+        try {
+          const resultado = await supabaseService.listarMensalistas('PENDENTE');
+          if (resultado.sucesso) {
+            const qtd = resultado.dados?.length || 0;
+            const qtdAnterior = pendenciasMensalistas;
+            
+            setPendenciasMensalistas(qtd);
+            
+            // Tocar som APENAS se:
+            // 1. Aumentou a quantidade (novo cadastro)
+            // 2. Está na tela principal (home)
+            // 3. Não é a primeira verificação
+            if (qtd > qtdAnterior && qtdAnterior >= 0 && ultimaVerificacaoPendencias > 0 && tela === 'home') {
+              audioService.alerta();
+            }
+            
+            setUltimaVerificacaoPendencias(Date.now());
+          }
+        } catch (erro) {
+          console.error('Erro ao verificar pendências:', erro);
+        }
+      }
+    };
+
+    // Verificar imediatamente
+    verificarPendencias();
+
+    // Verificar a cada 15 segundos (silencioso, exceto se novo cadastro na tela home)
+    intervalo = setInterval(verificarPendencias, 15000);
+
+    return () => {
+      if (intervalo) clearInterval(intervalo);
+    };
+  }, [tela, pendenciasMensalistas, ultimaVerificacaoPendencias]);
 
   // Inicializar impressoras
   useEffect(() => {
@@ -613,6 +707,197 @@ function App() {
 
     setPlacaSaida('');
     finalizarSaida(veiculoEncontrado);
+  };
+
+  const carregarDadosOperadores = async () => {
+    if (!supabaseService.initialized) return;
+
+    setCarregandoOperadores(true);
+
+    try {
+      const [resPoliticas, resOperadores] = await Promise.all([
+        supabaseService.listarPoliticasAcesso(),
+        supabaseService.listarOperadores()
+      ]);
+
+      if (resPoliticas.sucesso && resPoliticas.dados.length > 0) {
+        setNiveisAcessoDisponiveis(resPoliticas.dados);
+        setFormOperador((anterior) => ({
+          ...anterior,
+          nivelAcesso: resPoliticas.dados.includes(anterior.nivelAcesso)
+            ? anterior.nivelAcesso
+            : resPoliticas.dados[0]
+        }));
+      }
+
+      if (resOperadores.sucesso) {
+        const apenasOperadoresAtivos = resOperadores.dados.filter((item) => {
+          const nivel = String(item.nivelAcesso || '').toUpperCase();
+          return item.ativo !== false && nivel === 'OPERADOR';
+        });
+        setOperadoresAdmin(apenasOperadoresAtivos);
+      } else {
+        showToast(`Erro ao carregar operadores: ${resOperadores.erro}`, 'error');
+      }
+    } catch (erro) {
+      showToast(`Erro ao carregar operadores: ${erro.message}`, 'error');
+    } finally {
+      setCarregandoOperadores(false);
+    }
+  };
+
+  const limparFormularioOperador = () => {
+    setFormOperador((anterior) => ({
+      operador: '',
+      nomeCompleto: '',
+      senha: '',
+      nivelAcesso: anterior.nivelAcesso || 'OPERADOR'
+    }));
+  };
+
+  const criarOperadorAdmin = async () => {
+    const operador = formOperador.operador.trim();
+    const nomeCompleto = formOperador.nomeCompleto.trim();
+    const senha = formOperador.senha.trim();
+
+    if (!operador) {
+      showToast('Informe o nome do operador.', 'error');
+      return;
+    }
+
+    if (!nomeCompleto) {
+      showToast('Informe o nome completo.', 'error');
+      return;
+    }
+
+    if (senha.length < 6) {
+      showToast('A senha deve ter pelo menos 6 caracteres.', 'error');
+      return;
+    }
+
+    setSalvandoOperador(true);
+
+    try {
+      const resultado = await supabaseService.criarOperador({
+        operador,
+        senha,
+        nomeCompleto,
+        nivelAcesso: formOperador.nivelAcesso
+      });
+
+      if (!resultado.sucesso) {
+        showToast(`Erro ao criar operador: ${resultado.erro}`, 'error', 5000);
+        return;
+      }
+
+      showToast('Operador criado com sucesso!', 'success');
+      limparFormularioOperador();
+      await carregarDadosOperadores();
+    } finally {
+      setSalvandoOperador(false);
+    }
+  };
+
+  const removerOperadorAdmin = async (operador) => {
+    const nivel = String(operador?.nivelAcesso || '').toUpperCase();
+    if (nivel === 'MASTER') {
+      showToast('Conta MASTER não pode ser removida por esta tela.', 'warning');
+      return;
+    }
+
+    const resultado = await supabaseService.removerOperador(operador);
+
+    if (!resultado.sucesso) {
+      showToast(`Erro ao remover operador: ${resultado.erro}`, 'error', 5000);
+      return;
+    }
+
+    showToast('Operador removido com sucesso.', 'success');
+    await carregarDadosOperadores();
+  };
+
+  // =====================================================================
+  // FUNÇÕES PARA GERENCIAR PÁTIOS
+  // =====================================================================
+
+  const carregarPatios = async () => {
+    if (!supabaseService.initialized) return;
+
+    setCarregandoPatios(true);
+
+    try {
+      const resultado = await supabaseService.listarPatios();
+
+      if (resultado.sucesso) {
+        setPatiosAdmin(resultado.dados || []);
+      } else {
+        showToast(`Erro ao carregar pátios: ${resultado.erro}`, 'error');
+      }
+    } catch (erro) {
+      showToast(`Erro ao carregar pátios: ${erro.message}`, 'error');
+    } finally {
+      setCarregandoPatios(false);
+    }
+  };
+
+  const criarPatioAdmin = async () => {
+    const nome = formPatio.nome.trim();
+
+    if (!nome) {
+      showToast('Informe o nome do pátio.', 'error');
+      return;
+    }
+
+    setSalvandoPatio(true);
+
+    try {
+      const resultado = await supabaseService.criarPatio({
+        nome,
+        endereco: formPatio.endereco.trim(),
+        cidade: formPatio.cidade.trim(),
+        estado: formPatio.estado.trim(),
+        qtd_vagas: formPatio.qtd_vagas,
+        telefone: formPatio.telefone.trim(),
+        email: formPatio.email.trim(),
+        descricao: formPatio.descricao.trim()
+      });
+
+      if (!resultado.sucesso) {
+        showToast(`Erro ao criar pátio: ${resultado.erro}`, 'error', 5000);
+        return;
+      }
+
+      showToast('Pátio criado com sucesso!', 'success');
+      limparFormularioPatio();
+      await carregarPatios();
+    } finally {
+      setSalvandoPatio(false);
+    }
+  };
+
+  const removerPatioAdmin = async (patio) => {
+    const resultado = await supabaseService.removerPatio(patio.id);
+
+    if (!resultado.sucesso) {
+      showToast(`Erro ao remover pátio: ${resultado.erro}`, 'error', 5000);
+      return;
+    }
+
+    showToast('Pátio removido com sucesso.', 'success');
+    await carregarPatios();
+  };
+
+  const limparFormularioPatio = () => {
+    setFormPatio({
+      nome: '',
+      endereco: '',
+      cidade: '',
+      estado: '',
+      qtd_vagas: '',
+      telefone: '',
+      email: '',
+      descricao: ''
+    });
   };
 
   // Login admin
@@ -1016,21 +1301,423 @@ function App() {
 
   // TELA ADMINISTRATIVA
   if (tela === 'admin') {
+    // Menu Principal do Admin
+    if (!secaoAdmin) {
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 p-4">
+          <div className="max-w-6xl mx-auto">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-6">
+              <h1 className="text-3xl font-bold text-blue-900 flex items-center gap-2">
+                <Settings className="w-8 h-8" />
+                Administração
+              </h1>
+              <button onClick={() => setTela('home')} className="btn-secondary flex items-center gap-2">
+                <Home className="w-5 h-5" />
+                Voltar
+              </button>
+            </div>
+
+            {/* Grade de Botões */}
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {/* Gestão de Operadores */}
+              <button
+                onClick={() => setSecaoAdmin('operadores')}
+                className="bg-white hover:bg-blue-50 border-2 border-blue-200 rounded-lg p-6 transition-all hover:scale-105 hover:shadow-xl text-left"
+              >
+                <Users className="w-10 h-10 text-blue-600 mb-3" />
+                <h2 className="text-xl font-bold text-gray-900">Gestão de Operadores</h2>
+                <p className="text-sm text-gray-600 mt-2">Criar e gerenciar operadores com políticas de acesso</p>
+              </button>
+
+              {/* Gestão de Pátios */}
+              <button
+                onClick={() => setSecaoAdmin('patios')}
+                className="bg-white hover:bg-green-50 border-2 border-green-200 rounded-lg p-6 transition-all hover:scale-105 hover:shadow-xl text-left"
+              >
+                <Home className="w-10 h-10 text-green-600 mb-3" />
+                <h2 className="text-xl font-bold text-gray-900">Gestão de Pátios</h2>
+                <p className="text-sm text-gray-600 mt-2">Cadastrar e gerenciar pátios de estacionamento</p>
+              </button>
+
+              {/* Impressoras */}
+              <button
+                onClick={() => setSecaoAdmin('impressoras')}
+                className="bg-white hover:bg-purple-50 border-2 border-purple-200 rounded-lg p-6 transition-all hover:scale-105 hover:shadow-xl text-left"
+              >
+                <Printer className="w-10 h-10 text-purple-600 mb-3" />
+                <h2 className="text-xl font-bold text-gray-900">Impressoras</h2>
+                <p className="text-sm text-gray-600 mt-2">Configurar impressoras Bluetooth e USB</p>
+              </button>
+
+              {/* Personalização */}
+              <button
+                onClick={() => setSecaoAdmin('empresa')}
+                className="bg-white hover:bg-pink-50 border-2 border-pink-200 rounded-lg p-6 transition-all hover:scale-105 hover:shadow-xl text-left"
+              >
+                <Car className="w-10 h-10 text-pink-600 mb-3" />
+                <h2 className="text-xl font-bold text-gray-900">Personalização da Empresa</h2>
+                <p className="text-sm text-gray-600 mt-2">Nome, CNPJ, logo e dados da empresa</p>
+              </button>
+
+              {/* Configuração de Ticket */}
+              <button
+                onClick={() => setSecaoAdmin('ticket')}
+                className="bg-white hover:bg-indigo-50 border-2 border-indigo-200 rounded-lg p-6 transition-all hover:scale-105 hover:shadow-xl text-left"
+              >
+                <Printer className="w-10 h-10 text-indigo-600 mb-3" />
+                <h2 className="text-xl font-bold text-gray-900">Configuração de Ticket</h2>
+                <p className="text-sm text-gray-600 mt-2">Layout, fontes e formatação de impressão</p>
+              </button>
+
+              {/* Preços */}
+              <button
+                onClick={() => setSecaoAdmin('precos')}
+                className="bg-white hover:bg-yellow-50 border-2 border-yellow-200 rounded-lg p-6 transition-all hover:scale-105 hover:shadow-xl text-left"
+              >
+                <DollarSign className="w-10 h-10 text-yellow-600 mb-3" />
+                <h2 className="text-xl font-bold text-gray-900">Configurações de Preço</h2>
+                <p className="text-sm text-gray-600 mt-2">Valores, frações e tetos de cobrança</p>
+              </button>
+
+              {/* Gerenciamento de Registros */}
+              <button
+                onClick={() => setSecaoAdmin('registros')}
+                className="bg-white hover:bg-red-50 border-2 border-red-200 rounded-lg p-6 transition-all hover:scale-105 hover:shadow-xl text-left"
+              >
+                <Trash2 className="w-10 h-10 text-red-600 mb-3" />
+                <h2 className="text-xl font-bold text-gray-900">Gerenciamento de Registros</h2>
+                <p className="text-sm text-gray-600 mt-2">Deletar registros por dia, mês ou individual</p>
+              </button>
+
+              {/* Controle de Cadastros */}
+              <button
+                onClick={() => setSecaoAdmin('mensalistas')}
+                className="bg-white hover:bg-emerald-50 border-2 border-emerald-200 rounded-lg p-6 transition-all hover:scale-105 hover:shadow-xl text-left"
+              >
+                <Users className="w-10 h-10 text-emerald-600 mb-3" />
+                <h2 className="text-xl font-bold text-gray-900">Controle de Cadastros</h2>
+                <p className="text-sm text-gray-600 mt-2">Gerenciar solicitações de mensalistas</p>
+                {pendenciasMensalistas > 0 && (
+                  <span className="inline-block mt-2 bg-red-500 text-white px-3 py-1 rounded-full text-xs font-bold">
+                    {pendenciasMensalistas} pendente(s)
+                  </span>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Renderizar seção específica
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 p-4">
         <div className="max-w-4xl mx-auto">
-          {/* Header */}
+          {/* Header da Seção */}
           <div className="flex items-center justify-between mb-6">
-            <h1 className="text-3xl font-bold text-blue-900 flex items-center gap-2">
-              <Settings className="w-8 h-8" />
-              Administração
-            </h1>
-            <button onClick={() => setTela('home')} className="btn-secondary flex items-center gap-2">
+            <button 
+              onClick={() => setSecaoAdmin(null)} 
+              className="btn-secondary flex items-center gap-2"
+            >
               <Home className="w-5 h-5" />
-              Voltar
+              Voltar ao Menu
+            </button>
+            <button onClick={() => setTela('home')} className="btn-secondary flex items-center gap-2">
+              <LogOut className="w-5 h-5" />
+              Sair do Admin
             </button>
           </div>
 
+          {/* Conteúdo da Seção Selecionada */}
+          {secaoAdmin === 'operadores' && (
+            <div className="card mb-6 border-2 border-blue-200">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold flex items-center gap-2 text-blue-900">
+                <Users className="w-6 h-6 text-blue-600" />
+                Gestão de Operadores
+              </h2>
+              <button
+                onClick={carregarDadosOperadores}
+                className="btn-secondary"
+                disabled={carregandoOperadores}
+              >
+                {carregandoOperadores ? 'Atualizando...' : 'Atualizar'}
+              </button>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-4 mb-5">
+              <div>
+                <label className="block text-sm font-semibold mb-2">Nome do operador (login)</label>
+                <input
+                  type="text"
+                  value={formOperador.operador}
+                  onChange={(e) => setFormOperador({ ...formOperador, operador: e.target.value })}
+                  className="input-field"
+                  placeholder="ex: joao"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold mb-2">Nome completo</label>
+                <input
+                  type="text"
+                  value={formOperador.nomeCompleto}
+                  onChange={(e) => setFormOperador({ ...formOperador, nomeCompleto: e.target.value })}
+                  className="input-field"
+                  placeholder="ex: João da Silva"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold mb-2">Senha inicial</label>
+                <input
+                  type="password"
+                  value={formOperador.senha}
+                  onChange={(e) => setFormOperador({ ...formOperador, senha: e.target.value })}
+                  className="input-field"
+                  placeholder="mínimo 6 caracteres"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold mb-2">Política de acesso</label>
+                <select
+                  value={formOperador.nivelAcesso}
+                  onChange={(e) => setFormOperador({ ...formOperador, nivelAcesso: e.target.value })}
+                  className="input-field"
+                >
+                  {niveisAcessoDisponiveis.map((nivel) => (
+                    <option key={nivel} value={nivel}>{nivel}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="flex gap-2 mb-6">
+              <button
+                onClick={criarOperadorAdmin}
+                disabled={salvandoOperador}
+                className={`btn-primary ${salvandoOperador ? 'opacity-60 cursor-not-allowed' : ''}`}
+              >
+                {salvandoOperador ? 'Criando operador...' : 'Criar operador'}
+              </button>
+              <button
+                onClick={limparFormularioOperador}
+                className="btn-secondary"
+              >
+                Limpar
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="font-bold text-gray-800">Operadores cadastrados</h3>
+
+              {carregandoOperadores ? (
+                <p className="text-sm text-gray-600">Carregando operadores...</p>
+              ) : operadoresAdmin.length === 0 ? (
+                <p className="text-sm text-gray-600">Nenhum operador ativo encontrado.</p>
+              ) : (
+                operadoresAdmin.map((operador) => (
+                  <div
+                    key={operador.id}
+                    className="bg-gray-50 border border-gray-200 rounded-lg p-3 flex items-center justify-between"
+                  >
+                    <div>
+                      <p className="font-semibold text-gray-900">{operador.nomeCompleto}</p>
+                      <p className="text-sm text-gray-600">{operador.email || 'sem email'} • {operador.nivelAcesso}</p>
+                    </div>
+
+                    <button
+                      onClick={() => setConfirmDialog({
+                        titulo: 'Remover operador',
+                        mensagem: `Confirma remover o operador ${operador.nomeCompleto}?`,
+                        onConfirm: () => removerOperadorAdmin(operador)
+                      })}
+                      className="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg text-sm font-semibold flex items-center gap-2"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      Deletar
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+            </div>
+          )}
+
+          {/* Seção Pátios */}
+          {secaoAdmin === 'patios' && (
+          <div className="card mb-6 border-2 border-green-200">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold flex items-center gap-2 text-green-900">
+                <Home className="w-6 h-6 text-green-600" />
+                Gestão de Pátios
+              </h2>
+              <button
+                onClick={carregarPatios}
+                className="btn-secondary"
+                disabled={carregandoPatios}
+              >
+                {carregandoPatios ? 'Atualizando...' : 'Atualizar'}
+              </button>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-4 mb-5">
+              <div>
+                <label className="block text-sm font-semibold mb-2">Nome do Pátio *</label>
+                <input
+                  type="text"
+                  value={formPatio.nome}
+                  onChange={(e) => setFormPatio({ ...formPatio, nome: e.target.value })}
+                  className="input-field"
+                  placeholder="ex: Pátio Centro"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold mb-2">Cidade</label>
+                <input
+                  type="text"
+                  value={formPatio.cidade}
+                  onChange={(e) => setFormPatio({ ...formPatio, cidade: e.target.value })}
+                  className="input-field"
+                  placeholder="ex: São Paulo"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold mb-2">Endereço</label>
+                <input
+                  type="text"
+                  value={formPatio.endereco}
+                  onChange={(e) => setFormPatio({ ...formPatio, endereco: e.target.value })}
+                  className="input-field"
+                  placeholder="ex: Rua Santos, 100"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold mb-2">Estado (UF)</label>
+                <input
+                  type="text"
+                  value={formPatio.estado}
+                  onChange={(e) => setFormPatio({ ...formPatio, estado: e.target.value.toUpperCase() })}
+                  maxLength="2"
+                  className="input-field"
+                  placeholder="ex: SP"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold mb-2">Quantidade de Vagas</label>
+                <input
+                  type="number"
+                  value={formPatio.qtd_vagas}
+                  onChange={(e) => setFormPatio({ ...formPatio, qtd_vagas: e.target.value })}
+                  className="input-field"
+                  placeholder="ex: 150"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold mb-2">Telefone</label>
+                <input
+                  type="text"
+                  value={formPatio.telefone}
+                  onChange={(e) => setFormPatio({ ...formPatio, telefone: e.target.value })}
+                  className="input-field"
+                  placeholder="ex: (11) 9999-9999"
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-sm font-semibold mb-2">E-mail</label>
+                <input
+                  type="email"
+                  value={formPatio.email}
+                  onChange={(e) => setFormPatio({ ...formPatio, email: e.target.value })}
+                  className="input-field"
+                  placeholder="ex: contato@patio.com.br"
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-sm font-semibold mb-2">Descrição</label>
+                <textarea
+                  value={formPatio.descricao}
+                  onChange={(e) => setFormPatio({ ...formPatio, descricao: e.target.value })}
+                  className="input-field"
+                  placeholder="Informações adicionais sobre o pátio..."
+                  rows="3"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2 mb-5">
+              <button
+                onClick={criarPatioAdmin}
+                disabled={salvandoPatio}
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-all active:scale-95 flex items-center justify-center gap-2"
+              >
+                {salvandoPatio ? 'Salvando...' : '+ Novo Pátio'}
+              </button>
+
+              <button
+                onClick={limparFormularioPatio}
+                className="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg transition-all active:scale-95 flex items-center justify-center gap-2"
+              >
+                Limpar
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="font-bold text-gray-800">Pátios cadastrados</h3>
+
+              {carregandoPatios ? (
+                <p className="text-sm text-gray-600">Carregando pátios...</p>
+              ) : patiosAdmin.length === 0 ? (
+                <p className="text-sm text-gray-600">Nenhum pátio encontrado. Crie um novo pátio acima.</p>
+              ) : (
+                patiosAdmin.map((patio) => (
+                  <div
+                    key={patio.id}
+                    className="bg-green-50 border border-green-200 rounded-lg p-3 flex items-center justify-between"
+                  >
+                    <div className="flex-1">
+                      <p className="font-semibold text-gray-900">{patio.nome}</p>
+                      <p className="text-sm text-gray-600">
+                        {patio.endereco && `${patio.endereco} • `}
+                        {patio.cidade && `${patio.cidade}, `}
+                        {patio.estado}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {patio.qtd_vagas > 0 && `${patio.qtd_vagas} vagas`}
+                        {patio.telefone && ` • ${patio.telefone}`}
+                      </p>
+                    </div>
+
+                    <button
+                      onClick={() => setConfirmDialog({
+                        titulo: 'Remover pátio',
+                        mensagem: `Confirma remover o pátio "${patio.nome}"?`,
+                        onConfirm: () => removerPatioAdmin(patio)
+                      })}
+                      className="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg text-sm font-semibold flex items-center gap-2"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      Deletar
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+          )}
+
+          {/* Seção Impressoras (Bluetooth + USB) */}
+          {secaoAdmin === 'impressoras' && (
+          <>
           {/* Configuração de Impressora Bluetooth */}
           <div className="card mb-6 bg-blue-50 border-2 border-blue-300">
             <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
@@ -1179,8 +1866,11 @@ function App() {
               </div>
             </div>
           </div>
+          </>
+          )}
 
-          {/* Personalização da Empresa */}
+          {/* Seção Personalização da Empresa */}
+          {secaoAdmin === 'empresa' && (
           <div className="card mb-6">
             <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
               <Car className="w-6 h-6 text-purple-600" />
@@ -1281,8 +1971,10 @@ function App() {
               </div>
             </div>
           </div>
+          )}
 
-          {/* Configuração de Impressão - COMPLETA */}
+          {/* Seção Configuração de Ticket */}
+          {secaoAdmin === 'ticket' && (
           <div className="card mb-6 bg-gradient-to-br from-blue-50 to-slate-50 border-2 border-blue-300">
             <h2 className="text-xl font-bold mb-4 flex items-center gap-2 text-blue-900">
               <Printer className="w-6 h-6 text-blue-600" />
@@ -1728,8 +2420,10 @@ function App() {
               </div>
             </div>
           </div>
+          )}
 
-          {/* Configurações de Preço */}
+          {/* Seção Configurações de Preço */}
+          {secaoAdmin === 'precos' && (
           <div className="card mb-6">
             <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
               <DollarSign className="w-6 h-6 text-green-600" />
@@ -1820,18 +2514,11 @@ function App() {
               </div>
             </div>
           </div>
+          )}
 
-          {/* Total em Caixa */}
-          <div className="card mb-6 bg-green-50 border-2 border-green-200">
-            <h2 className="text-2xl font-bold text-green-800 flex items-center gap-2 justify-center">
-              <DollarSign className="w-8 h-8" />
-              Total em Caixa: R$ {totalEmCaixa.toFixed(2)}
-            </h2>
-            <p className="text-center text-gray-600 mt-2">
-              {historico.length} veículo(s) finalizados hoje
-            </p>
-          </div>
-
+          {/* Seção Gerenciamento de Registros */}
+          {secaoAdmin === 'registros' && (
+          <>
           {/* Sistema de Deleção */}
           <div className="card mb-6 bg-red-50 border-2 border-red-200">
             <h2 className="text-xl font-bold mb-4 flex items-center gap-2 text-red-800">
@@ -2021,7 +2708,12 @@ function App() {
               </div>
             )}
           </div>
+          </>
+          )}
 
+          {/* Seção Controle de Mensalistas */}
+          {secaoAdmin === 'mensalistas' && (
+          <>
           {/* CONTROLE DE MENSALISTAS */}
           <div className="card mb-6 bg-gradient-to-r from-emerald-50 to-teal-50 border-2 border-emerald-300">
             <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
@@ -2066,6 +2758,8 @@ function App() {
             <Trash2 className="w-5 h-5" />
             Limpar Todos os Dados
           </button>
+          </>
+          )}
         </div>
 
         {/* Modal de Convite WhatsApp */}
@@ -2081,6 +2775,26 @@ function App() {
 
         {renderToasts()}
         {renderConfirmModal()}
+      </div>
+    );
+  }
+
+  // Se não está autenticado, mostrar tela de login
+  if (authCarregando) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+        <div className="bg-white rounded-xl shadow-xl p-6 text-center">
+          <p className="text-gray-700 font-medium">Carregando sessão...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!usuarioAutenticado) {
+    return (
+      <div>
+        <PaginaLogin onLoginSuccess={(usuario) => setUsuarioAutenticado(usuario)} />
+        {renderToasts()}
       </div>
     );
   }
@@ -2111,7 +2825,7 @@ function App() {
         )}
 
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
           <div className="flex items-center gap-3">
             {config.logoUrl && (
               <img 
@@ -2126,8 +2840,69 @@ function App() {
             </h1>
           </div>
 
-          {/* Status Impressora + Conexão */}
+          {/* Total em Caixa (agora na tela principal) */}
+          {mostrarTotalCaixa && (
+            <div className="bg-gradient-to-r from-green-400 to-emerald-500 border-2 border-white shadow-xl px-4 py-2 rounded-lg flex items-center gap-2">
+              <DollarSign className="w-6 h-6 text-white" />
+              <div className="text-white">
+                <p className="text-xs font-medium">Caixa</p>
+                <p className="text-lg font-bold">R$ {totalEmCaixa.toFixed(2)}</p>
+              </div>
+              <button
+                onClick={() => setMostrarTotalCaixa(false)}
+                className="ml-2 p-1 hover:bg-white/20 rounded transition-colors"
+                title="Ocultar"
+              >
+                <EyeOff className="w-4 h-4 text-white" />
+              </button>
+            </div>
+          )}
+
+          {/* Botão para mostrar Total em Caixa quando oculto */}
+          {!mostrarTotalCaixa && (
+            <button
+              onClick={() => setMostrarTotalCaixa(true)}
+              className="bg-green-500 hover:bg-green-600 text-white p-2 rounded-lg shadow-md transition-all"
+              title="Mostrar Total em Caixa"
+            >
+              <Eye className="w-5 h-5" />
+            </button>
+          )}
+
+          {/* Sino de Notificações - Mensalistas Pendentes */}
+          {pendenciasMensalistas > 0 && (
+            <button
+              onClick={() => {
+                setTela('admin');
+                setSecaoAdmin('mensalistas');
+              }}
+              className="relative bg-yellow-500 hover:bg-yellow-600 text-white p-3 rounded-lg shadow-md transition-all active:scale-95 animate-pulse"
+              title={`${pendenciasMensalistas} mensalista(s) pendente(s)`}
+            >
+              <Bell className="w-6 h-6" />
+              <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                {pendenciasMensalistas}
+              </span>
+            </button>
+          )}
+
+          {/* Status Impressora + Conexão + Logout */}
           <div className="flex items-center gap-2">
+            {/* User Info + Logout */}
+            <div className="bg-white border-2 border-blue-300 px-3 py-2 rounded-lg flex items-center gap-2 text-xs sm:text-sm">
+              <span className="text-blue-900 font-medium">{usuarioAutenticado?.email || 'User'}</span>
+              <button
+                onClick={() => {
+                  supabaseService.logout();
+                  setUsuarioAutenticado(null);
+                }}
+                className="ml-2 p-1 hover:bg-red-100 rounded transition-colors"
+                title="Sair"
+              >
+                <LogOut className="w-4 h-4 text-red-600" />
+              </button>
+            </div>
+
             {/* Status de Conexão (Offline-First) */}
             <StatusConexao />
 
@@ -2575,7 +3350,6 @@ function App() {
           </div>
         </div>
       )}
-      <TesteSupabase />
       {renderToasts()}
       {renderConfirmModal()}
     </div>

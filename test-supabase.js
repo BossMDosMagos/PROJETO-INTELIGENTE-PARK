@@ -20,7 +20,6 @@ try {
   const { data, error } = await supabase
     .from('politicas_acesso')
     .select('*')
-    .limit(1)
   
   if (error) {
     console.error('❌ Erro ao consultar banco:', error.message)

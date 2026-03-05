@@ -25,6 +25,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.98.0",
+    "dotenv": "^17.3.1",
     "esc-pos-encoder": "^3.0.0",
     "lucide-react": "^0.344.0",
     "qrcode": "^1.5.4",

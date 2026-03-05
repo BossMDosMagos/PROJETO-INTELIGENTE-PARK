@@ -14,25 +14,29 @@ export function TesteSupabase() {
   useEffect(() => {
     const testar = async () => {
       try {
+        // Esperar inicialização se ainda não tiver
+        let tentativasRestantes = 10
+        while (!supabaseService.initialized && tentativasRestantes > 0) {
+          await new Promise(resolve => setTimeout(resolve, 500))
+          tentativasRestantes--
+        }
+
         // 1. Verificar inicialização
         if (!supabaseService.initialized) {
-          setErro('❌ Supabase não foi inicializado')
+          setErro('❌ Supabase não foi inicializado após 5 segundos')
+          setStatus('⏳ Aguardando...')
           return
         }
 
-        // 2. Testar conexão
-        const conexao = await supabaseService.testarConexao()
-        if (!conexao.sucesso) {
-          setErro(`⚠️ Tabela não existe ainda. Execute migrations!\n\n${conexao.erro}`)
-          setStatus('✅ Conectado ao Supabase (tabelas não criadas ainda)')
-          return
-        }
-
-        // 3. Obter usuário
+        // 2. Obter usuário
         const user = supabaseService.obterUsuarioAtual()
         setUsuario(user)
 
-        setStatus('✅ 100% Funcional!')
+        if (user) {
+          setStatus('✅ Autenticado!')
+        } else {
+          setStatus('✅ Supabase pronto')
+        }
         setErro(null)
 
       } catch (erro) {
