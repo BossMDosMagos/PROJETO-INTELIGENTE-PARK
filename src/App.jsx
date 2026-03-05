@@ -1866,10 +1866,14 @@ ${'='.repeat(50)}
                 <Settings className="w-8 h-8" />
                 Administração
               </h1>
-              <button onClick={() => setTela('home')} className="btn-secondary flex items-center gap-2">
+              <Button 
+                variant="secondary" 
+                onClick={() => setTela('home')}
+                style={{ display: 'flex', alignItems: 'center', gap: DESIGN.spacing.sm }}
+              >
                 <Home className="w-5 h-5" />
                 Voltar
-              </button>
+              </Button>
             </div>
 
             {/* Grade de Botões */}
@@ -1986,17 +1990,22 @@ ${'='.repeat(50)}
         <div className="max-w-4xl mx-auto">
           {/* Header da Seção */}
           <div className="flex items-center justify-between mb-6">
-            <button 
-              onClick={() => setSecaoAdmin(null)} 
-              className="btn-secondary flex items-center gap-2"
+            <Button 
+              variant="secondary"
+              onClick={() => setSecaoAdmin(null)}
+              style={{ display: 'flex', alignItems: 'center', gap: DESIGN.spacing.sm }}
             >
               <Home className="w-5 h-5" />
               Voltar ao Menu
-            </button>
-            <button onClick={() => setTela('home')} className="btn-secondary flex items-center gap-2">
+            </Button>
+            <Button 
+              variant="secondary"
+              onClick={() => setTela('home')}
+              style={{ display: 'flex', alignItems: 'center', gap: DESIGN.spacing.sm }}
+            >
               <LogOut className="w-5 h-5" />
               Sair do Admin
-            </button>
+            </Button>
           </div>
 
           {/* Conteúdo da Seção Selecionada */}
@@ -2007,13 +2016,13 @@ ${'='.repeat(50)}
                 <Users className="w-6 h-6 text-blue-600" />
                 Gestão de Operadores
               </h2>
-              <button
+              <Button
+                variant="secondary"
                 onClick={carregarDadosOperadores}
-                className="btn-secondary"
                 disabled={carregandoOperadores}
               >
                 {carregandoOperadores ? 'Atualizando...' : 'Atualizar'}
-              </button>
+              </Button>
             </div>
 
             <div className="grid md:grid-cols-2 gap-4 mb-5">
@@ -2064,20 +2073,20 @@ ${'='.repeat(50)}
               </div>
             </div>
 
-            <div className="flex gap-2 mb-6">
-              <button
+            <div style={{ display: 'flex', gap: DESIGN.spacing.sm, marginBottom: DESIGN.spacing.lg }}>
+              <Button
+                variant="primary"
                 onClick={criarOperadorAdmin}
                 disabled={salvandoOperador}
-                className={`btn-primary ${salvandoOperador ? 'opacity-60 cursor-not-allowed' : ''}`}
               >
                 {salvandoOperador ? 'Criando operador...' : 'Criar operador'}
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="secondary"
                 onClick={limparFormularioOperador}
-                className="btn-secondary"
               >
                 Limpar
-              </button>
+              </Button>
             </div>
 
             <div className="space-y-2">
@@ -2152,13 +2161,13 @@ ${'='.repeat(50)}
                 <Home className="w-6 h-6 text-green-600" />
                 Gestão de Pátios
               </h2>
-              <button
+              <Button
+                variant="secondary"
                 onClick={carregarPatios}
-                className="btn-secondary"
                 disabled={carregandoPatios}
               >
                 {carregandoPatios ? 'Atualizando...' : 'Atualizar'}
-              </button>
+              </Button>
             </div>
 
             <div className="grid md:grid-cols-2 gap-4 mb-5">
@@ -2252,21 +2261,23 @@ ${'='.repeat(50)}
               </div>
             </div>
 
-            <div className="flex gap-2 mb-5">
-              <button
+            <div style={{ display: 'flex', gap: DESIGN.spacing.sm, marginBottom: DESIGN.spacing.md }}>
+              <Button
+                variant="primary"
+                fullWidth
                 onClick={criarPatioAdmin}
                 disabled={salvandoPatio}
-                className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-all active:scale-95 flex items-center justify-center gap-2"
               >
                 {salvandoPatio ? 'Salvando...' : '+ Novo Pátio'}
-              </button>
+              </Button>
 
-              <button
+              <Button
+                variant="secondary"
+                fullWidth
                 onClick={limparFormularioPatio}
-                className="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg transition-all active:scale-95 flex items-center justify-center gap-2"
               >
                 Limpar
-              </button>
+              </Button>
             </div>
 
             <div className="space-y-2">
@@ -4115,31 +4126,35 @@ ${'='.repeat(50)}
             
             <div className="flex gap-3">
               {(impressoraConectada || impressoraUSBConectada) && (
-                <button 
+                <Button 
                   onClick={() => {
                     const permanencia = formatarTempo(Date.now() - veiculoSelecionado.entrada);
                     const valor = calcularValor(veiculoSelecionado.entrada, Date.now(), veiculoSelecionado.tipo);
                     imprimirSaida(veiculoSelecionado, permanencia, valor);
                   }}
-                  className="btn-primary flex-1 flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700"
+                  variant="primary"
+                  fullWidth
+                  style={{ backgroundColor: DESIGN.colors.primary[600] }}
                 >
-                  <Printer className="w-5 h-5" />
+                  <Printer className="w-5 h-5" style={{ marginRight: DESIGN.spacing.xs }} />
                   Imprimir
-                </button>
+                </Button>
               )}
-              <button 
+              <Button 
                 onClick={confirmarSaida}
-                className="btn-primary flex-1 flex items-center justify-center gap-2"
+                variant="primary"
+                fullWidth
               >
-                <CheckCircle className="w-5 h-5" />
+                <CheckCircle className="w-5 h-5" style={{ marginRight: DESIGN.spacing.xs }} />
                 Confirmar
-              </button>
-              <button 
+              </Button>
+              <Button 
                 onClick={() => setVeiculoSelecionado(null)}
-                className="btn-secondary flex-1"
+                variant="secondary"
+                fullWidth
               >
                 Cancelar
-              </button>
+              </Button>
             </div>
           </div>
         </div>
