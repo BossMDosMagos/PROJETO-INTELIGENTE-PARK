@@ -2472,47 +2472,41 @@ ${'='.repeat(50)}
             </h2>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-semibold mb-2">
-                  Nome da Empresa / Estacionamento
-                </label>
-                <input
+                <Input
                   type="text"
+                  label="Nome da Empresa / Estacionamento"
                   value={config.nomeEmpresa}
                   onChange={(e) => setConfig({...config, nomeEmpresa: e.target.value})}
-                  className="input-field"
                   placeholder="ex: Inteligente Park, Estacionamento Central"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold mb-2">CNPJ</label>
-                <input
+                <Input
                   type="text"
+                  label="CNPJ"
                   value={config.cnpj || ''}
                   onChange={(e) => setConfig({...config, cnpj: e.target.value})}
-                  className="input-field"
                   placeholder="00.000.000/0001-00"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold mb-2">Endereço</label>
-                <input
+                <Input
                   type="text"
+                  label="Endereço"
                   value={config.endereco || ''}
                   onChange={(e) => setConfig({...config, endereco: e.target.value})}
-                  className="input-field"
                   placeholder="Rua, número, bairro, cidade"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold mb-2">Telefone</label>
-                <input
+                <Input
                   type="text"
+                  label="Telefone"
                   value={config.telefone || ''}
                   onChange={(e) => setConfig({...config, telefone: e.target.value})}
-                  className="input-field"
                   placeholder="(11) 99999-9999"
                 />
               </div>
@@ -3030,52 +3024,40 @@ ${'='.repeat(50)}
               </h2>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-semibold mb-2">
-                    Tempo da Fração (minutos)
-                  </label>
-                  <input
+                  <Input
                     type="number"
+                    label="Tempo da Fração (minutos)"
                     value={config.tempoFracao}
                     onChange={(e) => setConfig({...config, tempoFracao: parseInt(e.target.value)})}
-                    className="input-field"
                     min="1"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold mb-2">
-                    Valor da Fração (R$)
-                  </label>
-                  <input
+                  <Input
                     type="number"
                     step="0.01"
+                    label="Valor da Fração (R$)"
                     value={config.valorFracao}
                     onChange={(e) => setConfig({...config, valorFracao: parseFloat(e.target.value)})}
-                    className="input-field"
                     min="0"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold mb-2">
-                    Valor do Teto/Diária (R$)
-                  </label>
-                  <input
+                  <Input
                     type="number"
                     step="0.01"
+                    label="Valor do Teto/Diária (R$)"
                     value={config.valorTeto}
                     onChange={(e) => setConfig({...config, valorTeto: parseFloat(e.target.value)})}
-                    className="input-field"
                     min="0"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold mb-2">
-                    Ciclo do Teto (horas)
-                  </label>
-                  <input
+                  <Input
                     type="number"
+                    label="Ciclo do Teto (horas)"
                     value={config.cicloTeto / 60}
                     onChange={(e) => setConfig({...config, cicloTeto: parseInt(e.target.value) * 60})}
-                    className="input-field"
                     min="1"
                   />
                 </div>
@@ -3086,28 +3068,22 @@ ${'='.repeat(50)}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold mb-2">
-                    Valor da Fração Moto (R$) 🏍️
-                  </label>
-                  <input
+                  <Input
                     type="number"
                     step="0.01"
+                    label="Valor da Fração Moto (R$) 🏍️"
                     value={config.valorFracaoMoto}
                     onChange={(e) => setConfig({...config, valorFracaoMoto: parseFloat(e.target.value)})}
-                    className="input-field"
                     min="0"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold mb-2">
-                    Valor do Teto Moto (R$) 🏍️
-                  </label>
-                  <input
+                  <Input
                     type="number"
                     step="0.01"
+                    label="Valor do Teto Moto (R$) 🏍️"
                     value={config.valorTetoMoto}
                     onChange={(e) => setConfig({...config, valorTetoMoto: parseFloat(e.target.value)})}
-                    className="input-field"
                     min="0"
                   />
                 </div>
@@ -3130,22 +3106,20 @@ ${'='.repeat(50)}
               <div className="space-y-4 mb-6">
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-semibold mb-2">Nome do Tipo</label>
-                    <input
+                    <Input
                       type="text"
+                      label="Nome do Tipo"
                       value={formTipoEstacionavel.nome}
                       onChange={(e) => setFormTipoEstacionavel({...formTipoEstacionavel, nome: e.target.value})}
-                      className="input-field"
                       placeholder="ex: Bicicleta, Van, Barraca..."
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold mb-2">Descrição</label>
-                    <input
+                    <Input
                       type="text"
+                      label="Descrição"
                       value={formTipoEstacionavel.descricao}
                       onChange={(e) => setFormTipoEstacionavel({...formTipoEstacionavel, descricao: e.target.value})}
-                      className="input-field"
                       placeholder="ex: Bicicleta elétrica..."
                     />
                   </div>
@@ -3239,28 +3213,26 @@ ${'='.repeat(50)}
               <div className="space-y-4 mb-6">
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-semibold mb-2">Tipo de Estacionável</label>
-                    <select
+                    <Select
+                      label="Tipo de Estacionável"
                       value={formPrecoMensalista.tipoEstacionavelId}
                       onChange={(e) => setFormPrecoMensalista({...formPrecoMensalista, tipoEstacionavelId: e.target.value})}
-                      className="input-field"
-                    >
-                      <option value="">Selecione um tipo...</option>
-                      {tiposEstacionaveis.filter(t => t.ativo).map((tipo) => (
-                        <option key={tipo.id} value={tipo.id}>
-                          {tipo.nome} {tipo.descricao && `(${tipo.descricao})`}
-                        </option>
-                      ))}
-                    </select>
+                      options={[
+                        { value: '', label: 'Selecione um tipo...' },
+                        ...tiposEstacionaveis.filter(t => t.ativo).map((tipo) => ({
+                          value: tipo.id,
+                          label: `${tipo.nome}${tipo.descricao ? ` (${tipo.descricao})` : ''}`
+                        }))
+                      ]}
+                    />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold mb-2">Valor Mensal (R$)</label>
-                    <input
+                    <Input
                       type="number"
                       step="0.01"
+                      label="Valor Mensal (R$)"
                       value={formPrecoMensalista.valorMensal}
                       onChange={(e) => setFormPrecoMensalista({...formPrecoMensalista, valorMensal: e.target.value})}
-                      className="input-field"
                       placeholder="ex: 100.00"
                       min="0"
                     />
@@ -3355,12 +3327,13 @@ ${'='.repeat(50)}
               <div className="bg-white p-4 rounded-lg border border-red-300">
                 <h3 className="font-bold text-red-700 mb-3">🗑️ Deletar por Dia</h3>
                 <div className="flex gap-2">
-                  <input
+                  <Input
                     type="date"
                     id="dataDeletar"
-                    className="input-field flex-1"
+                    style={{ flex: 1 }}
                   />
-                  <button
+                  <Button
+                    variant="danger"
                     onClick={() => {
                       const input = document.getElementById('dataDeletar');
                       if (input.value) {
@@ -3369,10 +3342,9 @@ ${'='.repeat(50)}
                         input.value = '';
                       }
                     }}
-                    className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-bold transition-all active:scale-95"
                   >
                     Deletar Dia
-                  </button>
+                  </Button>
                 </div>
                 <p className="text-sm text-gray-600 mt-2">Datas disponíveis: {obterDatasUnicas().length > 0 ? obterDatasUnicas().join(', ') : 'Nenhuma'}</p>
               </div>
@@ -3381,18 +3353,16 @@ ${'='.repeat(50)}
               <div className="bg-white p-4 rounded-lg border border-red-300">
                 <h3 className="font-bold text-red-700 mb-3">🗑️ Deletar por Mês</h3>
                 <div className="flex gap-2">
-                  <select
+                  <Select
                     id="mesDeletar"
-                    className="input-field flex-1"
-                  >
-                    <option value="">Selecione um mês...</option>
-                    {obterMesesUnicos().map((mesAno) => (
-                      <option key={mesAno} value={mesAno}>
-                        {mesAno}
-                      </option>
-                    ))}
-                  </select>
-                  <button
+                    style={{ flex: 1 }}
+                    options={[
+                      { value: '', label: 'Selecione um mês...' },
+                      ...obterMesesUnicos().map((mesAno) => ({ value: mesAno, label: mesAno }))
+                    ]}
+                  />
+                  <Button
+                    variant="danger"
                     onClick={() => {
                       const select = document.getElementById('mesDeletar');
                       if (select.value) {
@@ -3401,10 +3371,9 @@ ${'='.repeat(50)}
                         select.value = '';
                       }
                     }}
-                    className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-bold transition-all active:scale-95"
                   >
                     Deletar Mês
-                  </button>
+                  </Button>
                 </div>
               </div>
 
@@ -3829,7 +3798,7 @@ ${'='.repeat(50)}
           
           {/* Campo de Placa com Autocompletar */}
           <div className="relative mb-4">
-            <input
+            <Input
               type="text"
               value={placa}
               onChange={(e) => handlePlacaChange(e.target.value)}
@@ -3839,7 +3808,7 @@ ${'='.repeat(50)}
               ))}
               onKeyPress={(e) => e.key === 'Enter' && registrarEntrada()}
               placeholder="ABC-1234 ou ABC-1D23"
-              className="input-field text-center font-bold text-2xl tracking-wider"
+              style={{ textAlign: 'center', fontWeight: 700, fontSize: '1.5rem', letterSpacing: '0.1em' }}
               maxLength="8"
               autoFocus
             />
@@ -3868,21 +3837,21 @@ ${'='.repeat(50)}
             )}
           </div>
           
-          <input
+          <Input
             type="text"
             value={modelo}
             onChange={(e) => setModelo(e.target.value.toUpperCase())}
             onKeyPress={(e) => e.key === 'Enter' && registrarEntrada()}
             placeholder="Modelo (ex: Gol, Civic, Onix)"
-            className="input-field mb-4 mt-4 text-center font-semibold"
+            style={{ textAlign: 'center', fontWeight: 600, marginTop: DESIGN.spacing.md, marginBottom: DESIGN.spacing.md }}
           />
-          <input
+          <Input
             type="text"
             value={cor}
             onChange={(e) => setCor(e.target.value.toUpperCase())}
             onKeyPress={(e) => e.key === 'Enter' && registrarEntrada()}
             placeholder="Cor (ex: Branco, Preto, Prata)"
-            className="input-field mb-4 text-center font-semibold"
+            style={{ textAlign: 'center', fontWeight: 600, marginBottom: DESIGN.spacing.md }}
           />
           
           {/* Seleção de Tipo de Veículo */}
