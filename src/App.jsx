@@ -7,7 +7,6 @@ import { PaginaCadastroPublico } from './PaginaCadastroPublico';
 import { ModalConviteWhatsApp } from './components/ModalConviteWhatsApp';
 import { AbaSolicitacoesMensalistas } from './components/AbaSolicitacoesMensalistas';
 import { StatusConexao } from './components/StatusConexao';
-import { StatusSupabase } from './components/StatusSupabase';
 import { PaginaLogin } from './components/PaginaLogin';
 import { mensalistaService } from './services/mensalistaService';
 import { audioService } from './services/audioService';

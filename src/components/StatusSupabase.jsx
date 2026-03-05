@@ -20,8 +20,8 @@ export function StatusSupabase() {
         await new Promise(r => setTimeout(r, 1000));
 
         if (!supabaseService.initialized) {
-          setStatus('erro');
-          setDetalhes('Supabase não foi inicializado. Verifique as variáveis de ambiente.');
+          setStatus('aviso');
+          setDetalhes('Conexão com Supabase em preparação.');
           return;
         }
 
