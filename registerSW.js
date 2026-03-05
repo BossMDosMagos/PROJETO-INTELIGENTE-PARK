@@ -1,0 +1,1 @@
+if('serviceWorker' in navigator) {window.addEventListener('load', () => {navigator.serviceWorker.register('/PROJETO-INTELIGENTE-PARK/sw.js', { scope: '/PROJETO-INTELIGENTE-PARK/' })})}
