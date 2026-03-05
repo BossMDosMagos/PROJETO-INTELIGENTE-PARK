@@ -12,6 +12,10 @@ import DESIGN from './design-system';
 import HeaderRedesenhado from './components/HeaderRedesenhado';
 import { Button } from './components/Button';
 import { StatusSincronizacao } from './components/StatusSincronizacao';
+import { Input, TextArea, Select } from './components/Input';
+import { Card, CardGrid, Alert, Badge } from './components/Card';
+import { Modal, ConfirmDialog, Drawer } from './components/Modal';
+import { Table, DataGrid } from './components/Table';
 import { mensalistaService } from './services/mensalistaService';
 import { audioService } from './services/audioService';
 import { syncService } from './services/syncService';
@@ -296,98 +300,102 @@ function App() {
     </div>
   );
 
-  const renderConfirmModal = () => {
-    if (!confirmDialog) return null;
 
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[110]">
-        <div className="bg-white rounded-lg shadow-2xl max-w-md w-full p-6">
-          <h3 className="text-xl font-bold mb-3 flex items-center gap-2 text-red-700">
-            <AlertTriangle className="w-6 h-6" />
-            {confirmDialog.titulo}
-          </h3>
-          <p className="text-gray-700 mb-6 whitespace-pre-line">{confirmDialog.mensagem}</p>
-          <div className="flex gap-3">
-            <button
-              onClick={confirmarDialogo}
-              className="btn-danger flex-1"
-            >
-              Confirmar
-            </button>
-            <button
-              onClick={cancelarDialogo}
-              className="btn-secondary flex-1"
-            >
-              Cancelar
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  };
 
   const renderModalControleCaixa = () => {
     return (
-      <div className={`fixed inset-0 bg-black ${showModalControleCaixa ? 'bg-opacity-50' : 'bg-opacity-0 pointer-events-none'} flex items-center justify-center p-4 z-[100] transition-all`}>
-        <div className={`bg-white rounded-lg shadow-2xl max-w-md w-full p-6 transform transition-all ${showModalControleCaixa ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`}>
-          <h2 className="text-2xl font-bold mb-6 flex items-center gap-2 text-blue-900">
-            <DollarSign className="w-7 h-7 text-green-600" />
-            Controle de Caixa
-          </h2>
-
-          {!caixaAberto ? (
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-semibold mb-2">Valor Inicial do Caixa (R$)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={valorCaixaAbreConfig}
-                  onChange={(e) => setValorCaixaAbreConfig(e.target.value)}
-                  className="input-field"
-                  placeholder="300.00"
-                  min="0"
-                  autoFocus
-                />
-              </div>
-              <p className="text-sm text-gray-600 text-center">Este é o fundo de troco inicial.</p>
-              <div className="flex gap-2">
-                <button
-                  onClick={abrirCaixa}
-                  className="btn-primary flex-1"
-                >
-                  ✓ Abrir Caixa
-                </button>
-                <button
-                  onClick={() => setShowModalControleCaixa(false)}
-                  className="btn-secondary flex-1"
-                >
-                  Cancelar
-                </button>
-              </div>
+      <Modal
+        isOpen={showModalControleCaixa}
+        onClose={() => setShowModalControleCaixa(false)}
+        title="Controle de Caixa"
+        size="md"
+      >
+        {!caixaAberto ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: DESIGN.spacing.md }}>
+            <div>
+              <label style={{
+                display: 'block',
+                fontSize: '0.875rem',
+                fontWeight: 600,
+                marginBottom: DESIGN.spacing.sm
+              }}>
+                Valor Inicial do Caixa (R$)
+              </label>
+              <Input
+                type="number"
+                step="0.01"
+                value={valorCaixaAbreConfig}
+                onChange={(e) => setValorCaixaAbreConfig(e.target.value)}
+                placeholder="300.00"
+                min="0"
+                autoFocus
+              />
             </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="bg-green-50 border border-green-300 rounded-lg p-4">
-                <p className="text-sm text-green-700 font-semibold">✅ Caixa Aberto</p>
-                <p className="text-lg font-bold text-green-900 mt-2">Aberto há: {dataAberturaCaixa && new Date(dataAberturaCaixa).toLocaleString('pt-BR')}</p>
-              </div>
-              <button
-                onClick={fecharCaixa}
-                className="btn-danger w-full"
+            <p style={{
+              fontSize: '0.875rem',
+              color: DESIGN.colors.neutral[600],
+              textAlign: 'center'
+            }}>
+              Este é o fundo de troco inicial.
+            </p>
+            <div style={{ display: 'flex', gap: DESIGN.spacing.sm }}>
+              <Button
+                variant="primary"
+                fullWidth
+                onClick={abrirCaixa}
               >
-                🔐 Fechar Caixa
-              </button>
-              <button
+                ✓ Abrir Caixa
+              </Button>
+              <Button
+                variant="secondary"
+                fullWidth
                 onClick={() => setShowModalControleCaixa(false)}
-                className="btn-secondary w-full"
               >
                 Cancelar
-              </button>
+              </Button>
             </div>
-          )}
-        </div>
-      </div>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: DESIGN.spacing.md }}>
+            <div style={{
+              backgroundColor: DESIGN.colors.success[50],
+              border: `1px solid ${DESIGN.colors.success[300]}`,
+              borderRadius: DESIGN.border.md,
+              padding: DESIGN.spacing.md
+            }}>
+              <p style={{
+                fontSize: '0.875rem',
+                color: DESIGN.colors.success[700],
+                fontWeight: 600
+              }}>
+                ✅ Caixa Aberto
+              </p>
+              <p style={{
+                fontSize: '1.125rem',
+                fontWeight: 700,
+                color: DESIGN.colors.success[900],
+                marginTop: DESIGN.spacing.sm
+              }}>
+                Aberto há: {dataAberturaCaixa && new Date(dataAberturaCaixa).toLocaleString('pt-BR')}
+              </p>
+            </div>
+            <Button
+              variant="danger"
+              fullWidth
+              onClick={fecharCaixa}
+            >
+              🔐 Fechar Caixa
+            </Button>
+            <Button
+              variant="secondary"
+              fullWidth
+              onClick={() => setShowModalControleCaixa(false)}
+            >
+              Cancelar
+            </Button>
+          </div>
+        )}
+      </Modal>
     );
   };
 
@@ -470,20 +478,22 @@ function App() {
             </div>
 
             {/* Botões */}
-            <div className="flex gap-3">
-              <button
+            <div style={{ display: 'flex', gap: DESIGN.spacing.sm }}>
+              <Button
+                variant="primary"
+                fullWidth
                 onClick={imprimirRelatorioFechamento}
-                className="btn-primary flex-1 flex items-center justify-center gap-2"
               >
-                <Printer className="w-5 h-5" />
+                <Printer className="w-5 h-5" style={{ marginRight: DESIGN.spacing.xs }} />
                 Imprimir Relatório
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="secondary"
+                fullWidth
                 onClick={() => setShowRelatorioFechamento(false)}
-                className="btn-secondary flex-1"
               >
                 Fechar
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -1803,26 +1813,42 @@ ${'='.repeat(50)}
             <Lock className="w-12 h-12 text-blue-600" />
           </div>
           <h2 className="text-2xl font-bold text-center mb-6">Área Administrativa</h2>
-          <input
+          <Input
             type="password"
             value={senhaInput}
             onChange={(e) => setSenhaInput(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && fazerLogin()}
             placeholder="Digite a senha"
-            className="input-field mb-4"
             autoFocus
           />
-          <div className="flex gap-3">
-            <button onClick={fazerLogin} className="btn-primary flex-1">
+          <div style={{ display: 'flex', gap: DESIGN.spacing.sm, marginTop: DESIGN.spacing.md }}>
+            <Button 
+              variant="primary" 
+              fullWidth
+              onClick={fazerLogin}
+            >
               Entrar
-            </button>
-            <button onClick={() => setTela('home')} className="btn-secondary flex-1">
+            </Button>
+            <Button 
+              variant="secondary" 
+              fullWidth
+              onClick={() => setTela('home')}
+            >
               Cancelar
-            </button>
+            </Button>
           </div>
         </div>
         {renderToasts()}
-        {renderConfirmModal()}
+        <ConfirmDialog
+          isOpen={!!confirmDialog}
+          title={confirmDialog?.titulo || ''}
+          message={confirmDialog?.mensagem || ''}
+          variant="danger"
+          confirmText="Confirmar"
+          cancelText="Cancelar"
+          onConfirm={confirmarDialogo}
+          onCancel={cancelarDialogo}
+        />
       </div>
     );
   }
@@ -3574,7 +3600,16 @@ ${'='.repeat(50)}
         />
 
         {renderToasts()}
-        {renderConfirmModal()}
+        <ConfirmDialog
+          isOpen={!!confirmDialog}
+          title={confirmDialog?.titulo || ''}
+          message={confirmDialog?.mensagem || ''}
+          variant="danger"
+          confirmText="Confirmar"
+          cancelText="Cancelar"
+          onConfirm={confirmarDialogo}
+          onCancel={cancelarDialogo}
+        />
       </div>
     );
   }
@@ -3871,9 +3906,15 @@ ${'='.repeat(50)}
             </button>
           </div>
           
-          <button onClick={registrarEntrada} className="btn-primary w-full text-xl py-4">
+          <Button 
+            variant="primary" 
+            fullWidth
+            size="lg"
+            onClick={registrarEntrada}
+            style={{ marginTop: DESIGN.spacing.md, fontSize: '1.125rem' }}
+          >
             REGISTRAR ENTRADA
-          </button>
+          </Button>
         </div>
 
         {/* Veículos no Pátio */}
@@ -4104,7 +4145,16 @@ ${'='.repeat(50)}
         </div>
       )}
       {renderToasts()}
-      {renderConfirmModal()}
+      <ConfirmDialog
+        isOpen={!!confirmDialog}
+        title={confirmDialog?.titulo || ''}
+        message={confirmDialog?.mensagem || ''}
+        variant="danger"
+        confirmText="Confirmar"
+        cancelText="Cancelar"
+        onConfirm={confirmarDialogo}
+        onCancel={cancelarDialogo}
+      />
       {renderModalControleCaixa()}
       {renderRelatorioFechamento()}
     </div>
