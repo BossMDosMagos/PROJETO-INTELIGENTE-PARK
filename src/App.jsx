@@ -84,7 +84,10 @@ const CONFIG_PADRAO = {
   valorFracaoMoto: 4.50, // R$ - Moto (50% do carro)
   valorTeto: 55.00, // R$ - Carro
   valorTetoMoto: 27.50, // R$ - Moto (50% do carro)
-  cicloTeto: 12 * 60 // 12 horas em minutos
+  cicloTeto: 12 * 60, // 12 horas em minutos
+  
+  // CONTROL DE CAIXA
+  valorCaixaInicial: 300.00 // Saldo inicial do caixa (geralmente R$ 300,00)
 };
 
 const SENHA_ADMIN = '1234';
@@ -157,10 +160,33 @@ function App() {
   // Estados para navegação do Admin
   const [secaoAdmin, setSecaoAdmin] = useState(null); // null = menu, ou nome da seção
 
+  // Estados para Tipos de Estacionáveis e Preços Mensalistas
+  const [tiposEstacionaveis, setTiposEstacionaveis] = useLocalStorage('park-tipos-estacionaveis', [
+    { id: 1, nome: 'Carro', descricao: 'Automóvel comum', ativo: true },
+    { id: 2, nome: 'Moto', descricao: 'Motocicleta', ativo: true }
+  ]);
+  const [precosMensalistas, setPrecosMensalistas] = useLocalStorage('park-precos-mensalistas', []);
+  const [formTipoEstacionavel, setFormTipoEstacionavel] = useState({ nome: '', descricao: '' });
+  const [carregandoTipos, setCarregandoTipos] = useState(false);
+  const [salvandoTipo, setSalvandoTipo] = useState(false);
+  const [editandoTipo, setEditandoTipo] = useState(null);
+  const [formPrecoMensalista, setFormPrecoMensalista] = useState({ tipoEstacionavelId: '', valorMensal: '' });
+  const [carregandoPrecos, setCarregandoPrecos] = useState(false);
+  const [salvandoPreco, setSalvandoPreco] = useState(false);
+  const [editandoPreco, setEditandoPreco] = useState(null);
+
   // Estados para notificações
   const [mostrarTotalCaixa, setMostrarTotalCaixa] = useState(true);
   const [pendenciasMensalistas, setPendenciasMensalistas] = useState(0);
   const [ultimaVerificacaoPendencias, setUltimaVerificacaoPendencias] = useState(0);
+
+  // Estados para Controle de Caixa
+  const [caixaAberto, setCaixaAberto] = useLocalStorage('park-caixa-aberto', false);
+  const [dataAberturaCaixa, setDataAberturaCaixa] = useLocalStorage('park-data-abertura-caixa', null);
+  const [dataFechamentoCaixa, setDataFechamentoCaixa] = useLocalStorage('park-data-fechamento-caixa', null);
+  const [showModalControleCaixa, setShowModalControleCaixa] = useState(false);
+  const [showRelatorioFechamento, setShowRelatorioFechamento] = useState(false);
+  const [valorCaixaAbreConfig, setValorCaixaAbreConfig] = useState('');
 
   const showToast = (mensagem, tipo = 'info', duracao = 3500) => {
     const id = Date.now() + Math.random();
@@ -295,6 +321,171 @@ function App() {
     );
   };
 
+  const renderModalControleCaixa = () => {
+    return (
+      <div className={`fixed inset-0 bg-black ${showModalControleCaixa ? 'bg-opacity-50' : 'bg-opacity-0 pointer-events-none'} flex items-center justify-center p-4 z-[100] transition-all`}>
+        <div className={`bg-white rounded-lg shadow-2xl max-w-md w-full p-6 transform transition-all ${showModalControleCaixa ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`}>
+          <h2 className="text-2xl font-bold mb-6 flex items-center gap-2 text-blue-900">
+            <DollarSign className="w-7 h-7 text-green-600" />
+            Controle de Caixa
+          </h2>
+
+          {!caixaAberto ? (
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold mb-2">Valor Inicial do Caixa (R$)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={valorCaixaAbreConfig}
+                  onChange={(e) => setValorCaixaAbreConfig(e.target.value)}
+                  className="input-field"
+                  placeholder="300.00"
+                  min="0"
+                  autoFocus
+                />
+              </div>
+              <p className="text-sm text-gray-600 text-center">Este é o fundo de troco inicial.</p>
+              <div className="flex gap-2">
+                <button
+                  onClick={abrirCaixa}
+                  className="btn-primary flex-1"
+                >
+                  ✓ Abrir Caixa
+                </button>
+                <button
+                  onClick={() => setShowModalControleCaixa(false)}
+                  className="btn-secondary flex-1"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="bg-green-50 border border-green-300 rounded-lg p-4">
+                <p className="text-sm text-green-700 font-semibold">✅ Caixa Aberto</p>
+                <p className="text-lg font-bold text-green-900 mt-2">Aberto há: {dataAberturaCaixa && new Date(dataAberturaCaixa).toLocaleString('pt-BR')}</p>
+              </div>
+              <button
+                onClick={fecharCaixa}
+                className="btn-danger w-full"
+              >
+                🔐 Fechar Caixa
+              </button>
+              <button
+                onClick={() => setShowModalControleCaixa(false)}
+                className="btn-secondary w-full"
+              >
+                Cancelar
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  const renderRelatorioFechamento = () => {
+    if (!showRelatorioFechamento) return null;
+
+    const {
+      dataAbertura,
+      dataFechamento,
+      caixaInicial,
+      registrosDoDia,
+      totalArrecadado,
+      valorDeposito,
+      totalCaixa
+    } = showRelatorioFechamento;
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[100] overflow-y-auto">
+        <div className="bg-white rounded-lg shadow-2xl max-w-2xl w-full p-8 my-8">
+          <h2 className="text-2xl font-bold mb-6 text-center text-blue-900">
+            📋 PRESTAÇÃO DE CONTAS - FECHAMENTO
+          </h2>
+
+          <div className="space-y-6">
+            {/* Header */}
+            <div className="text-center border-b-2 border-gray-300 pb-4">
+              <p className="text-lg font-bold">{config.nomeEmpresa}</p>
+              <p className="text-sm text-gray-600">Abertura: {new Date(dataAbertura).toLocaleString('pt-BR')}</p>
+              <p className="text-sm text-gray-600">Fechamento: {new Date(dataFechamento).toLocaleString('pt-BR')}</p>
+            </div>
+
+            {/* Caixa Inicial */}
+            <div className="bg-blue-50 border border-blue-300 rounded-lg p-4">
+              <p className="text-sm text-gray-600">Caixa Inicial (Fundo de Troco)</p>
+              <p className="text-2xl font-bold text-blue-900">R$ {caixaInicial.toFixed(2)}</p>
+            </div>
+
+            {/* Movimentação do Dia */}
+            <div>
+              <h3 className="font-bold text-gray-800 mb-3">Movimentação do Dia ({registrosDoDia.length} entradas)</h3>
+              <div className="max-h-48 overflow-y-auto space-y-2 bg-gray-50 p-3 rounded-lg">
+                {registrosDoDia.length === 0 ? (
+                  <p className="text-gray-600 text-center py-4">Nenhum registro no dia de hoje.</p>
+                ) : (
+                  registrosDoDia.map((reg, idx) => {
+                    const entrada = new Date(reg.entrada).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                    const saida = new Date(reg.saida).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                    return (
+                      <div key={idx} className="flex justify-between text-sm border-b border-gray-200 pb-2">
+                        <span>{idx + 1}. {reg.placa} ({entrada}→{saida})</span>
+                        <span className="font-bold">R$ {reg.valor.toFixed(2)}</span>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+
+            {/* Resumo Final - DESTACADO */}
+            <div className="border-2 border-green-500 rounded-lg p-6 bg-green-50">
+              <h3 className="font-bold text-green-900 mb-4 text-center">RESUMO FINAL</h3>
+              <div className="space-y-3">
+                <div className="flex justify-between text-gray-700">
+                  <span>Total de Pagamentos:</span>
+                  <span className="font-bold">R$ {totalArrecadado.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-gray-700">
+                  <span>Menos Caixa Inicial:</span>
+                  <span className="font-bold">-R$ {caixaInicial.toFixed(2)}</span>
+                </div>
+                <div className="border-t-2 border-green-300 pt-3 flex justify-between">
+                  <span className="font-bold text-green-900">VALOR PARA DEPOSITAR:</span>
+                  <span className="text-2xl font-bold text-green-600">R$ {valorDeposito.toFixed(2)}</span>
+                </div>
+                <div className="bg-white p-3 rounded border border-green-300 flex justify-between mt-4">
+                  <span className="font-bold text-gray-800">Total em Caixa:</span>
+                  <span className="text-xl font-bold text-blue-900">R$ {totalCaixa.toFixed(2)}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Botões */}
+            <div className="flex gap-3">
+              <button
+                onClick={imprimirRelatorioFechamento}
+                className="btn-primary flex-1 flex items-center justify-center gap-2"
+              >
+                <Printer className="w-5 h-5" />
+                Imprimir Relatório
+              </button>
+              <button
+                onClick={() => setShowRelatorioFechamento(false)}
+                className="btn-secondary flex-1"
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // Inicializar syncService e supabaseService
   useEffect(() => {
     // Carrega fila de sincronização do localStorage
@@ -369,6 +560,13 @@ function App() {
       if (intervalo) clearInterval(intervalo);
     };
   }, [tela, pendenciasMensalistas, ultimaVerificacaoPendencias]);
+
+  // Carregar operadores automaticamente quando entrar na seção
+  useEffect(() => {
+    if (secaoAdmin === 'operadores' && supabaseService.initialized) {
+      carregarDadosOperadores();
+    }
+  }, [secaoAdmin]);
 
   // Inicializar impressoras
   useEffect(() => {
@@ -613,7 +811,66 @@ function App() {
       nomeMensalista: mensalistaEncontrado?.nome || null
     };
 
-    setVeiculos([...veiculos, novoVeiculo]);
+    // =====================================================================
+    // SISTEMA DE PERMUTA: Se mensalista tem 2+ veículos, faz saída do mais antigo
+    // =====================================================================
+    let veiculoRemovido = null;
+    if (mensalistaEncontrado) {
+      // Conta quantos veículos deste mensalista estão no pátio
+      const veiculosMensalista = veiculos.filter(v => {
+        const mensalistaVeiculo = verificarMensalista(v.placa);
+        return mensalistaVeiculo && mensalistaVeiculo.nome === mensalistaEncontrado.nome;
+      });
+
+      // Se já tem 2 ou mais veículos, remove o mais antigo (permuta automática)
+      if (veiculosMensalista.length >= 2) {
+        const veiculoMaisAntigo = veiculosMensalista.reduce((mais, atual) =>
+          atual.entrada < mais.entrada ? atual : mais
+        );
+
+        veiculoRemovido = veiculoMaisAntigo;
+        
+        // Remove o veículo mais antigo
+        setVeiculos((prevVeiculos) =>
+          prevVeiculos.filter(v => v.id !== veiculoMaisAntigo.id)
+        );
+
+        // Registra saída automática no histórico
+        const saida = Date.now();
+        // MENSALISTAS SEMPRE TEM VALOR 0,00 (isento)
+        const valor = veiculoMaisAntigo.isMensalista ? 0 : calcularValor(veiculoMaisAntigo.entrada, saida, veiculoMaisAntigo.tipo);
+        const permanencia = saida - veiculoMaisAntigo.entrada;
+
+        const registro = {
+          id: Date.now() + Math.random(),
+          placa: veiculoMaisAntigo.placa,
+          modelo: veiculoMaisAntigo.modelo,
+          cor: veiculoMaisAntigo.cor,
+          tipo: veiculoMaisAntigo.tipo,
+          entrada: veiculoMaisAntigo.entrada,
+          saida,
+          permanencia,
+          valor,
+          isMensalista: veiculoMaisAntigo.isMensalista,
+          nomeMensalista: veiculoMaisAntigo.nomeMensalista
+        };
+
+        setHistorico((prev) => [registro, ...prev]);
+
+        // Sincroniza saída automática com Supabase
+        supabaseService.registrarSaida({
+          placa: registro.placa,
+          modelo: registro.modelo,
+          cor: registro.cor,
+          tipo: registro.tipo,
+          horaSaida: new Date(saida).toISOString(),
+          valor: registro.valor,
+          isMensalista: registro.isMensalista
+        });
+      }
+    }
+
+    setVeiculos((prev) => [...prev, novoVeiculo]);
     setPlaca('');
     setModelo('');
     setCor('');
@@ -627,7 +884,17 @@ function App() {
         placa: mensalistaEncontrado.placa,
         vencimento: mensalistaEncontrado.dataVencimento
       });
-      showToast(`✅ ACESSO LIBERADO - Mensalista: ${mensalistaEncontrado.nome}`, 'success', 5000);
+
+      // Mostra mensagem de permuta se removeu um veículo
+      if (veiculoRemovido) {
+        showToast(
+          `🔄 PERMUTA AUTOMÁTICA\n${veiculoRemovido.placa} (${veiculoRemovido.modelo}) saiu para liberar vaga.\n✅ ${novoVeiculo.placa} (${novoVeiculo.modelo}) agora no pátio.`,
+          'info',
+          6000
+        );
+      } else {
+        showToast(`✅ ACESSO LIBERADO - Mensalista: ${mensalistaEncontrado.nome}`, 'success', 5000);
+      }
     }
 
     // Sincronizar com Supabase (offline-first)
@@ -647,6 +914,129 @@ function App() {
     }
   };
 
+  // =====================================================================
+  // FUNÇÕES PARA CONTROLE DE CAIXA
+  // =====================================================================
+
+  const abrirCaixa = () => {
+    if (!valorCaixaAbreConfig || parseFloat(valorCaixaAbreConfig) <= 0) {
+      showToast('Informe um valor inicial válido para o caixa.', 'error');
+      return;
+    }
+
+    const novoValor = parseFloat(valorCaixaAbreConfig);
+    setConfig({ ...config, valorCaixaInicial: novoValor });
+    setCaixaAberto(true);
+    setDataAberturaCaixa(new Date().toISOString());
+    setDataFechamentoCaixa(null);
+    setShowModalControleCaixa(false);
+    setValorCaixaAbreConfig('');
+    showToast(`✅ Caixa aberto com valor inicial: R$ ${novoValor.toFixed(2)}`, 'success');
+  };
+
+  const fecharCaixa = () => {
+    // Calcula os valores do dia
+    const dataAtualISO = new Date().toISOString().split('T')[0];
+    const registrosDoDia = historico.filter((reg) => {
+      const dataSaida = new Date(reg.saida).toISOString().split('T')[0];
+      return dataSaida === dataAtualISO;
+    });
+
+    const totalArrecadado = registrosDoDia.reduce((soma, reg) => soma + (reg.valor || 0), 0);
+    const caixaInicial = config.valorCaixaInicial;
+    const valorDeposito = totalArrecadado;
+    const totalCaixa = caixaInicial + valorDeposito;
+
+    setCaixaAberto(false);
+    setDataFechamentoCaixa(new Date().toISOString());
+    setShowModalControleCaixa(false);
+
+    // Abre o relatório
+    setShowRelatorioFechamento({
+      dataAbertura: dataAberturaCaixa,
+      dataFechamento: new Date().toISOString(),
+      caixaInicial,
+      registrosDoDia,
+      totalArrecadado,
+      valorDeposito,
+      totalCaixa
+    });
+  };
+
+  const imprimirRelatorioFechamento = () => {
+    if (!showRelatorioFechamento) return;
+
+    const {
+      dataAbertura,
+      dataFechamento,
+      caixaInicial,
+      registrosDoDia,
+      totalArrecadado,
+      valorDeposito,
+      totalCaixa
+    } = showRelatorioFechamento;
+
+    const dataAberturaFormatada = new Date(dataAbertura).toLocaleString('pt-BR');
+    const dataFechamentoFormatada = new Date(dataFechamento).toLocaleString('pt-BR');
+
+    let conteudoRelatorio = `
+${'='.repeat(50)}
+PRESTAÇÃO DE CONTAS - FECHAMENTO DE CAIXA
+${'='.repeat(50)}
+
+${config.nomeEmpresa}
+Abertura: ${dataAberturaFormatada}
+Fechamento: ${dataFechamentoFormatada}
+
+${'='.repeat(50)}
+RESUMO FINANCEIRO
+${'='.repeat(50)}
+
+Caixa Inicial (Fundo de Troco): R$ ${caixaInicial.toFixed(2)}
+
+${'='.repeat(50)}
+MOVIMENTAÇÃO DO DIA
+${'='.repeat(50)}
+
+Total de Entradas: ${registrosDoDia.length}
+
+    `;
+
+    registrosDoDia.forEach((reg, idx) => {
+      const entrada = new Date(reg.entrada).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+      const saida = new Date(reg.saida).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+      conteudoRelatorio += `${idx + 1}. ${reg.placa} - ${entrada} > ${saida} - R$ ${reg.valor.toFixed(2)}\n    `;
+    });
+
+    conteudoRelatorio += `
+${'='.repeat(50)}
+RESUMO FINAL
+${'='.repeat(50)}
+
+Total de Pagamentos do Dia: R$ ${totalArrecadado.toFixed(2)}
+Menos Caixa Inicial: -R$ ${caixaInicial.toFixed(2)}
+VALOR PARA DEPOSITAR: R$ ${valorDeposito.toFixed(2)}
+
+Total em Caixa: R$ ${totalCaixa.toFixed(2)}
+
+${'='.repeat(50)}
+Gerado em: ${new Date().toLocaleString('pt-BR')}
+${'='.repeat(50)}
+    `;
+
+    // Imprime se tiver impressora
+    if (impressoraConectada || impressoraUSBConectada) {
+      const impressoraSelecionada = impressoraConectada ? impressora : impressoraUSB;
+      if (impressoraSelecionada?.imprimirTexto) {
+        impressoraSelecionada.imprimirTexto(conteudoRelatorio);
+      }
+    } else {
+      // Copia para clipboard se não tiver impressora
+      navigator.clipboard.writeText(conteudoRelatorio);
+      showToast('Relatório copiado para clipboard! ✓', 'info');
+    }
+  };
+
   // Finaliza saída de veículo
   const finalizarSaida = (veiculo) => {
     setVeiculoSelecionado(veiculo);
@@ -657,7 +1047,8 @@ function App() {
     if (!veiculoSelecionado) return;
 
     const saida = Date.now();
-    const valor = calcularValor(veiculoSelecionado.entrada, saida, veiculoSelecionado.tipo);
+    // MENSALISTAS SEMPRE TEM VALOR 0,00 (isento)
+    const valor = veiculoSelecionado.isMensalista ? 0 : calcularValor(veiculoSelecionado.entrada, saida, veiculoSelecionado.tipo);
     const permanencia = formatarTempo(saida - veiculoSelecionado.entrada);
     const registro = {
       ...veiculoSelecionado,
@@ -731,8 +1122,8 @@ function App() {
 
       if (resOperadores.sucesso) {
         const apenasOperadoresAtivos = resOperadores.dados.filter((item) => {
-          const nivel = String(item.nivelAcesso || '').toUpperCase();
-          return item.ativo !== false && nivel === 'OPERADOR';
+          // Mostra TODOS os operadores ativos, incluindo MASTER
+          return item.ativo !== false;
         });
         setOperadoresAdmin(apenasOperadoresAtivos);
       } else {
@@ -798,10 +1189,21 @@ function App() {
   };
 
   const removerOperadorAdmin = async (operador) => {
-    const nivel = String(operador?.nivelAcesso || '').toUpperCase();
-    if (nivel === 'MASTER') {
-      showToast('Conta MASTER não pode ser removida por esta tela.', 'warning');
-      return;
+    const nivelOperador = String(operador?.nivelAcesso || '').toUpperCase();
+    const nivelAutenticado = String(usuarioAutenticado?.nivelAcesso || '').toUpperCase();
+    
+    // Se for MASTER, apenas outro MASTER pode deletar
+    if (nivelOperador === 'MASTER') {
+      if (nivelAutenticado !== 'MASTER') {
+        showToast('Apenas MASTER pode remover outro MASTER.', 'warning');
+        return;
+      }
+      
+      // Verifica se está tentando se deletar a si mesmo
+      if (usuarioAutenticado?.id === operador?.id) {
+        showToast('Você não pode se deletar a si mesmo.', 'warning');
+        return;
+      }
     }
 
     const resultado = await supabaseService.removerOperador(operador);
@@ -813,6 +1215,119 @@ function App() {
 
     showToast('Operador removido com sucesso.', 'success');
     await carregarDadosOperadores();
+  };
+
+  // =====================================================================
+  // FUNÇÕES PARA GERENCIAR TIPOS DE ESTACIONÁVEIS E PREÇOS MENSALISTAS
+  // =====================================================================
+
+  const adicionarTipoEstacionavel = () => {
+    if (!formTipoEstacionavel.nome.trim()) {
+      showToast('Informe o nome do tipo de estacionável.', 'error');
+      return;
+    }
+
+    setSalvandoTipo(true);
+    try {
+      if (editandoTipo) {
+        // Atualizar tipo existente
+        setTiposEstacionaveis((prev) =>
+          prev.map((tipo) =>
+            tipo.id === editandoTipo.id
+              ? { ...tipo, nome: formTipoEstacionavel.nome, descricao: formTipoEstacionavel.descricao }
+              : tipo
+          )
+        );
+        showToast('Tipo de estacionável atualizado com sucesso!', 'success');
+        setEditandoTipo(null);
+      } else {
+        // Criar novo tipo
+        const novoTipo = {
+          id: Date.now(),
+          nome: formTipoEstacionavel.nome,
+          descricao: formTipoEstacionavel.descricao,
+          ativo: true
+        };
+        setTiposEstacionaveis((prev) => [...prev, novoTipo]);
+        showToast('Tipo de estacionável criado com sucesso!', 'success');
+      }
+      setFormTipoEstacionavel({ nome: '', descricao: '' });
+    } finally {
+      setSalvandoTipo(false);
+    }
+  };
+
+  const ativarDesativarTipo = (tipoId) => {
+    setTiposEstacionaveis((prev) =>
+      prev.map((tipo) =>
+        tipo.id === tipoId ? { ...tipo, ativo: !tipo.ativo } : tipo
+      )
+    );
+  };
+
+  const removerTipoEstacionavel = (tipoId) => {
+    // Verifica se existem preços vinculados a este tipo
+    const temPrecos = precosMensalistas.some((preco) => preco.tipoEstacionavelId === tipoId);
+    if (temPrecos) {
+      showToast('Não é possível remover este tipo, pois existem preços vinculados.', 'warning');
+      return;
+    }
+    
+    setTiposEstacionaveis((prev) => prev.filter((tipo) => tipo.id !== tipoId));
+    showToast('Tipo de estacionável removido com sucesso!', 'success');
+  };
+
+  const adicionarPrecoMensalista = () => {
+    if (!formPrecoMensalista.tipoEstacionavelId) {
+      showToast('Selecione um tipo de estacionável.', 'error');
+      return;
+    }
+
+    if (!formPrecoMensalista.valorMensal || parseFloat(formPrecoMensalista.valorMensal) <= 0) {
+      showToast('Informe um valor mensal válido.', 'error');
+      return;
+    }
+
+    setSalvandoPreco(true);
+    try {
+      if (editandoPreco) {
+        // Atualizar preço existente
+        setPrecosMensalistas((prev) =>
+          prev.map((preco) =>
+            preco.id === editandoPreco.id
+              ? {
+                  ...preco,
+                  tipoEstacionavelId: parseInt(formPrecoMensalista.tipoEstacionavelId),
+                  valorMensal: parseFloat(formPrecoMensalista.valorMensal)
+                }
+              : preco
+          )
+        );
+        showToast('Preço de mensalista atualizado com sucesso!', 'success');
+        setEditandoPreco(null);
+      } else {
+        // Criar novo preço
+        const novoPreco = {
+          id: Date.now(),
+          tipoEstacionavelId: parseInt(formPrecoMensalista.tipoEstacionavelId),
+          valorMensal: parseFloat(formPrecoMensalista.valorMensal)
+        };
+        setPrecosMensalistas((prev) => [...prev, novoPreco]);
+        showToast('Preço de mensalista criado com sucesso!', 'success');
+      }
+      setFormPrecoMensalista({ tipoEstacionavelId: '', valorMensal: '' });
+    } finally {
+      setSalvandoPreco(false);
+    }
+  };
+
+  const removerPrecoMensalista = (precoId) => {
+    setPrecosMensalistas((prev) => prev.filter((preco) => preco.id !== precoId));
+    showToast('Preço de mensalista removido com sucesso!', 'success');
+  };
+
+  const obterNomeTipo = (tipoId) => {
+    return tiposEstacionaveis.find((tipo) => tipo.id === tipoId)?.nome || 'Desconhecido';
   };
 
   // =====================================================================
@@ -1403,6 +1918,22 @@ function App() {
                   </span>
                 )}
               </button>
+
+              {/* Controle de Caixa */}
+              <button
+                onClick={() => setShowModalControleCaixa(true)}
+                className={`border-2 rounded-lg p-6 transition-all hover:scale-105 hover:shadow-xl text-left ${
+                  caixaAberto
+                    ? 'bg-emerald-50 border-emerald-200 hover:bg-emerald-100'
+                    : 'bg-white hover:bg-amber-50 border-amber-200'
+                }`}
+              >
+                <DollarSign className={`w-10 h-10 mb-3 ${caixaAberto ? 'text-emerald-600' : 'text-amber-600'}`} />
+                <h2 className="text-xl font-bold text-gray-900">Controle de Caixa</h2>
+                <p className="text-sm text-gray-600 mt-2">
+                  {caixaAberto ? '✅ Caixa aberto' : 'Abrir/fechar caixa e gerar prestações'}
+                </p>
+              </button>
             </div>
           </div>
         </div>
@@ -1517,29 +2048,57 @@ function App() {
               ) : operadoresAdmin.length === 0 ? (
                 <p className="text-sm text-gray-600">Nenhum operador ativo encontrado.</p>
               ) : (
-                operadoresAdmin.map((operador) => (
-                  <div
-                    key={operador.id}
-                    className="bg-gray-50 border border-gray-200 rounded-lg p-3 flex items-center justify-between"
-                  >
-                    <div>
-                      <p className="font-semibold text-gray-900">{operador.nomeCompleto}</p>
-                      <p className="text-sm text-gray-600">{operador.email || 'sem email'} • {operador.nivelAcesso}</p>
-                    </div>
-
-                    <button
-                      onClick={() => setConfirmDialog({
-                        titulo: 'Remover operador',
-                        mensagem: `Confirma remover o operador ${operador.nomeCompleto}?`,
-                        onConfirm: () => removerOperadorAdmin(operador)
-                      })}
-                      className="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg text-sm font-semibold flex items-center gap-2"
+                operadoresAdmin.map((operador) => {
+                  const nivelOperador = String(operador?.nivelAcesso || '').toUpperCase();
+                  const nivelAutenticado = String(usuarioAutenticado?.nivelAcesso || '').toUpperCase();
+                  const ehMaster = nivelOperador === 'MASTER';
+                  const ehVoceMesmo = usuarioAutenticado?.id === operador?.id;
+                  const podeDeleter = !ehMaster || (nivelAutenticado === 'MASTER' && !ehVoceMesmo);
+                  
+                  return (
+                    <div
+                      key={operador.id}
+                      className={`border rounded-lg p-3 flex items-center justify-between ${
+                        ehMaster 
+                          ? 'bg-purple-50 border-purple-300' 
+                          : 'bg-gray-50 border-gray-200'
+                      }`}
                     >
-                      <Trash2 className="w-4 h-4" />
-                      Deletar
-                    </button>
-                  </div>
-                ))
+                      <div>
+                        <p className="font-semibold text-gray-900">
+                          {operador.nomeCompleto}
+                          {ehMaster && <span className="ml-2 text-purple-700 font-bold text-xs bg-purple-100 px-2 py-1 rounded">MASTER</span>}
+                          {ehVoceMesmo && <span className="ml-2 text-blue-700 font-bold text-xs bg-blue-100 px-2 py-1 rounded">VOCÊ</span>}
+                        </p>
+                        <p className="text-sm text-gray-600">{operador.email || 'sem email'} • {operador.nivelAcesso}</p>
+                      </div>
+
+                      <button
+                        onClick={() => setConfirmDialog({
+                          titulo: 'Remover operador',
+                          mensagem: `Confirma remover o operador ${operador.nomeCompleto}?`,
+                          onConfirm: () => removerOperadorAdmin(operador)
+                        })}
+                        disabled={!podeDeleter}
+                        className={`${
+                          podeDeleter
+                            ? 'bg-red-600 hover:bg-red-700 text-white'
+                            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                        } px-3 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 transition-all`}
+                        title={
+                          !podeDeleter
+                            ? ehVoceMesmo
+                              ? 'Você não pode se deletar'
+                              : 'Apenas MASTER pode deletar MASTER'
+                            : 'Deletar operador'
+                        }
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        Deletar
+                      </button>
+                    </div>
+                  );
+                })
               )}
             </div>
             </div>
@@ -2423,95 +2982,323 @@ function App() {
 
           {/* Seção Configurações de Preço */}
           {secaoAdmin === 'precos' && (
-          <div className="card mb-6">
-            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-              <DollarSign className="w-6 h-6 text-green-600" />
-              Configurações de Preço
-            </h2>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-semibold mb-2">
-                  Tempo da Fração (minutos)
-                </label>
-                <input
-                  type="number"
-                  value={config.tempoFracao}
-                  onChange={(e) => setConfig({...config, tempoFracao: parseInt(e.target.value)})}
-                  className="input-field"
-                  min="1"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold mb-2">
-                  Valor da Fração (R$)
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={config.valorFracao}
-                  onChange={(e) => setConfig({...config, valorFracao: parseFloat(e.target.value)})}
-                  className="input-field"
-                  min="0"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold mb-2">
-                  Valor do Teto/Diária (R$)
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={config.valorTeto}
-                  onChange={(e) => setConfig({...config, valorTeto: parseFloat(e.target.value)})}
-                  className="input-field"
-                  min="0"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold mb-2">
-                  Ciclo do Teto (horas)
-                </label>
-                <input
-                  type="number"
-                  value={config.cicloTeto / 60}
-                  onChange={(e) => setConfig({...config, cicloTeto: parseInt(e.target.value) * 60})}
-                  className="input-field"
-                  min="1"
-                />
-              </div>
+          <div className="space-y-6">
+            
+            {/* SEÇÃO 1: PREÇOS POR FRAÇÃO */}
+            <div className="card mb-6">
+              <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                <DollarSign className="w-6 h-6 text-green-600" />
+                Preços por Fração de Tempo
+              </h2>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-semibold mb-2">
+                    Tempo da Fração (minutos)
+                  </label>
+                  <input
+                    type="number"
+                    value={config.tempoFracao}
+                    onChange={(e) => setConfig({...config, tempoFracao: parseInt(e.target.value)})}
+                    className="input-field"
+                    min="1"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold mb-2">
+                    Valor da Fração (R$)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={config.valorFracao}
+                    onChange={(e) => setConfig({...config, valorFracao: parseFloat(e.target.value)})}
+                    className="input-field"
+                    min="0"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold mb-2">
+                    Valor do Teto/Diária (R$)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={config.valorTeto}
+                    onChange={(e) => setConfig({...config, valorTeto: parseFloat(e.target.value)})}
+                    className="input-field"
+                    min="0"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold mb-2">
+                    Ciclo do Teto (horas)
+                  </label>
+                  <input
+                    type="number"
+                    value={config.cicloTeto / 60}
+                    onChange={(e) => setConfig({...config, cicloTeto: parseInt(e.target.value) * 60})}
+                    className="input-field"
+                    min="1"
+                  />
+                </div>
 
-              {/* Divisor */}
-              <div className="border-t-2 border-gray-300 py-2">
-                <p className="text-center font-bold text-gray-600">VALORES PARA MOTO (50% do carro)</p>
-              </div>
+                {/* Divisor */}
+                <div className="border-t-2 border-gray-300 py-2">
+                  <p className="text-center font-bold text-gray-600">VALORES PARA MOTO (50% do carro)</p>
+                </div>
 
-              <div>
-                <label className="block text-sm font-semibold mb-2">
-                  Valor da Fração Moto (R$) 🏍️
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={config.valorFracaoMoto}
-                  onChange={(e) => setConfig({...config, valorFracaoMoto: parseFloat(e.target.value)})}
-                  className="input-field"
-                  min="0"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold mb-2">
-                  Valor do Teto Moto (R$) 🏍️
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={config.valorTetoMoto}
-                  onChange={(e) => setConfig({...config, valorTetoMoto: parseFloat(e.target.value)})}
-                  className="input-field"
-                  min="0"
-                />
+                <div>
+                  <label className="block text-sm font-semibold mb-2">
+                    Valor da Fração Moto (R$) 🏍️
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={config.valorFracaoMoto}
+                    onChange={(e) => setConfig({...config, valorFracaoMoto: parseFloat(e.target.value)})}
+                    className="input-field"
+                    min="0"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold mb-2">
+                    Valor do Teto Moto (R$) 🏍️
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={config.valorTetoMoto}
+                    onChange={(e) => setConfig({...config, valorTetoMoto: parseFloat(e.target.value)})}
+                    className="input-field"
+                    min="0"
+                  />
+                </div>
+
+                <div className="bg-blue-100 p-4 rounded-lg border border-blue-300">
+                  <p className="text-sm text-blue-900">
+                    ✅ <strong>Salvo automaticamente!</strong> Configure os preços de fração e teto para veículos regulares.
+                  </p>
+                </div>
               </div>
             </div>
+
+            {/* SEÇÃO 2: TIPOS DE ESTACIONÁVEIS */}
+            <div className="card mb-6 border-2 border-purple-200">
+              <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                <Car className="w-6 h-6 text-purple-600" />
+                Tipos de Estacionáveis
+              </h2>
+
+              <div className="space-y-4 mb-6">
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold mb-2">Nome do Tipo</label>
+                    <input
+                      type="text"
+                      value={formTipoEstacionavel.nome}
+                      onChange={(e) => setFormTipoEstacionavel({...formTipoEstacionavel, nome: e.target.value})}
+                      className="input-field"
+                      placeholder="ex: Bicicleta, Van, Barraca..."
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold mb-2">Descrição</label>
+                    <input
+                      type="text"
+                      value={formTipoEstacionavel.descricao}
+                      onChange={(e) => setFormTipoEstacionavel({...formTipoEstacionavel, descricao: e.target.value})}
+                      className="input-field"
+                      placeholder="ex: Bicicleta elétrica..."
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={adicionarTipoEstacionavel}
+                    disabled={salvandoTipo}
+                    className={`btn-primary ${salvandoTipo ? 'opacity-60 cursor-not-allowed' : ''}`}
+                  >
+                    {editandoTipo ? 'Atualizar Tipo' : 'Adicionar Tipo'}
+                  </button>
+                  {editandoTipo && (
+                    <button
+                      onClick={() => {
+                        setEditandoTipo(null);
+                        setFormTipoEstacionavel({ nome: '', descricao: '' });
+                      }}
+                      className="btn-secondary"
+                    >
+                      Cancelar
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <h3 className="font-bold text-gray-800 mb-3">Tipos Cadastrados</h3>
+              <div className="space-y-2">
+                {tiposEstacionaveis.length === 0 ? (
+                  <p className="text-sm text-gray-600">Nenhum tipo cadastrado.</p>
+                ) : (
+                  tiposEstacionaveis.map((tipo) => (
+                    <div
+                      key={tipo.id}
+                      className={`border rounded-lg p-3 flex items-center justify-between ${
+                        tipo.ativo ? 'bg-purple-50 border-purple-300' : 'bg-gray-100 border-gray-300 opacity-60'
+                      }`}
+                    >
+                      <div>
+                        <p className="font-semibold text-gray-900">
+                          {tipo.nome}
+                          {!tipo.ativo && <span className="ml-2 text-gray-600 text-xs">(INATIVO)</span>}
+                        </p>
+                        {tipo.descricao && <p className="text-sm text-gray-600">{tipo.descricao}</p>}
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => ativarDesativarTipo(tipo.id)}
+                          className={`px-3 py-2 rounded-lg text-sm font-semibold transition-all ${
+                            tipo.ativo
+                              ? 'bg-green-500 hover:bg-green-600 text-white'
+                              : 'bg-gray-400 hover:bg-gray-500 text-white'
+                          }`}
+                          title={tipo.ativo ? 'Desativar' : 'Ativar'}
+                        >
+                          {tipo.ativo ? '✓' : '○'}
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            setEditandoTipo(tipo);
+                            setFormTipoEstacionavel({ nome: tipo.nome, descricao: tipo.descricao });
+                          }}
+                          className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-semibold flex items-center gap-2"
+                        >
+                          ✎
+                        </button>
+
+                        <button
+                          onClick={() => removerTipoEstacionavel(tipo.id)}
+                          className="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg text-sm font-semibold"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* SEÇÃO 3: PREÇOS MENSALISTAS */}
+            <div className="card mb-6 border-2 border-orange-200">
+              <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                <DollarSign className="w-6 h-6 text-orange-600" />
+                Preços Mensalistas por Tipo
+              </h2>
+
+              <div className="space-y-4 mb-6">
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold mb-2">Tipo de Estacionável</label>
+                    <select
+                      value={formPrecoMensalista.tipoEstacionavelId}
+                      onChange={(e) => setFormPrecoMensalista({...formPrecoMensalista, tipoEstacionavelId: e.target.value})}
+                      className="input-field"
+                    >
+                      <option value="">Selecione um tipo...</option>
+                      {tiposEstacionaveis.filter(t => t.ativo).map((tipo) => (
+                        <option key={tipo.id} value={tipo.id}>
+                          {tipo.nome} {tipo.descricao && `(${tipo.descricao})`}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold mb-2">Valor Mensal (R$)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={formPrecoMensalista.valorMensal}
+                      onChange={(e) => setFormPrecoMensalista({...formPrecoMensalista, valorMensal: e.target.value})}
+                      className="input-field"
+                      placeholder="ex: 100.00"
+                      min="0"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={adicionarPrecoMensalista}
+                    disabled={salvandoPreco}
+                    className={`btn-primary ${salvandoPreco ? 'opacity-60 cursor-not-allowed' : ''}`}
+                  >
+                    {editandoPreco ? 'Atualizar Preço' : 'Adicionar Preço'}
+                  </button>
+                  {editandoPreco && (
+                    <button
+                      onClick={() => {
+                        setEditandoPreco(null);
+                        setFormPrecoMensalista({ tipoEstacionavelId: '', valorMensal: '' });
+                      }}
+                      className="btn-secondary"
+                    >
+                      Cancelar
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <h3 className="font-bold text-gray-800 mb-3">Preços Cadastrados</h3>
+              <div className="space-y-2">
+                {precosMensalistas.length === 0 ? (
+                  <p className="text-sm text-gray-600">Nenhum preço de mensalista cadastrado.</p>
+                ) : (
+                  precosMensalistas.map((preco) => (
+                    <div
+                      key={preco.id}
+                      className="bg-orange-50 border border-orange-200 rounded-lg p-3 flex items-center justify-between"
+                    >
+                      <div>
+                        <p className="font-semibold text-gray-900">{obterNomeTipo(preco.tipoEstacionavelId)}</p>
+                        <p className="text-sm text-gray-600">Valor mensal: <strong>R$ {preco.valorMensal.toFixed(2)}</strong></p>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => {
+                            setEditandoPreco(preco);
+                            setFormPrecoMensalista({
+                              tipoEstacionavelId: preco.tipoEstacionavelId.toString(),
+                              valorMensal: preco.valorMensal.toString()
+                            });
+                          }}
+                          className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-semibold flex items-center gap-2"
+                        >
+                          ✎
+                        </button>
+
+                        <button
+                          onClick={() => removerPrecoMensalista(preco.id)}
+                          className="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg text-sm font-semibold"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              <div className="bg-orange-100 p-4 rounded-lg border border-orange-300 mt-4">
+                <p className="text-sm text-orange-900">
+                  ✅ <strong>Salvo automaticamente!</strong> Configure os preços mensalistas para cada tipo de estacionável.
+                </p>
+              </div>
+            </div>
+
           </div>
           )}
 
@@ -2868,22 +3655,49 @@ function App() {
             </button>
           )}
 
+          {/* Botão Controle de Caixa */}
+          <button
+            onClick={() => setShowModalControleCaixa(true)}
+            className={`text-white p-3 rounded-lg shadow-md transition-all active:scale-95 ${
+              caixaAberto
+                ? 'bg-emerald-600 hover:bg-emerald-700'
+                : 'bg-amber-500 hover:bg-amber-600'
+            }`}
+            title={caixaAberto ? 'Caixa aberto - Clique para fechar' : 'Clique para abrir o caixa'}
+          >
+            <DollarSign className="w-6 h-6" />
+          </button>
+
           {/* Sino de Notificações - Mensalistas Pendentes */}
-          {pendenciasMensalistas > 0 && (
-            <button
-              onClick={() => {
+          <button
+            onClick={() => {
+              // Verifica se está autenticado antes de abrir o admin
+              if (usuarioAutenticado) {
                 setTela('admin');
                 setSecaoAdmin('mensalistas');
-              }}
-              className="relative bg-yellow-500 hover:bg-yellow-600 text-white p-3 rounded-lg shadow-md transition-all active:scale-95 animate-pulse"
-              title={`${pendenciasMensalistas} mensalista(s) pendente(s)`}
-            >
-              <Bell className="w-6 h-6" />
+              } else {
+                // Se não estiver autenticado, vai para login
+                setTela('login-admin');
+              }
+            }}
+            className={`relative ${
+              pendenciasMensalistas > 0 
+                ? 'bg-yellow-500 hover:bg-yellow-600 animate-pulse' 
+                : 'bg-gray-400 hover:bg-gray-500'
+            } text-white p-3 rounded-lg shadow-md transition-all active:scale-95`}
+            title={
+              pendenciasMensalistas > 0 
+                ? `${pendenciasMensalistas} mensalista(s) pendente(s)` 
+                : 'Nenhum mensalista pendente'
+            }
+          >
+            <Bell className="w-6 h-6" />
+            {pendenciasMensalistas > 0 && (
               <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
                 {pendenciasMensalistas}
               </span>
-            </button>
-          )}
+            )}
+          </button>
 
           {/* Status Impressora + Conexão + Logout */}
           <div className="flex items-center gap-2">
@@ -3351,6 +4165,8 @@ function App() {
       )}
       {renderToasts()}
       {renderConfirmModal()}
+      {renderModalControleCaixa()}
+      {renderRelatorioFechamento()}
     </div>
   );
 }
