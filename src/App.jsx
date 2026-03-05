@@ -2563,12 +2563,14 @@ ${'='.repeat(50)}
                           className="max-w-32 max-h-32 object-contain rounded-lg shadow-md"
                         />
                       </div>
-                      <button
+                      <Button
+                        variant="danger"
+                        fullWidth
+                        size="sm"
                         onClick={removerLogo}
-                        className="btn-danger w-full py-2 text-sm"
                       >
                         🗑️ Remover Logo
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 )}
@@ -3164,24 +3166,24 @@ ${'='.repeat(50)}
                   </div>
                 </div>
 
-                <div className="flex gap-2">
-                  <button
+                <div style={{ display: 'flex', gap: DESIGN.spacing.sm }}>
+                  <Button
+                    variant="primary"
                     onClick={adicionarTipoEstacionavel}
                     disabled={salvandoTipo}
-                    className={`btn-primary ${salvandoTipo ? 'opacity-60 cursor-not-allowed' : ''}`}
                   >
                     {editandoTipo ? 'Atualizar Tipo' : 'Adicionar Tipo'}
-                  </button>
+                  </Button>
                   {editandoTipo && (
-                    <button
+                    <Button
+                      variant="secondary"
                       onClick={() => {
                         setEditandoTipo(null);
                         setFormTipoEstacionavel({ nome: '', descricao: '' });
                       }}
-                      className="btn-secondary"
                     >
                       Cancelar
-                    </button>
+                    </Button>
                   )}
                 </div>
               </div>
@@ -3280,24 +3282,24 @@ ${'='.repeat(50)}
                   </div>
                 </div>
 
-                <div className="flex gap-2">
-                  <button
+                <div style={{ display: 'flex', gap: DESIGN.spacing.sm }}>
+                  <Button
+                    variant="primary"
                     onClick={adicionarPrecoMensalista}
                     disabled={salvandoPreco}
-                    className={`btn-primary ${salvandoPreco ? 'opacity-60 cursor-not-allowed' : ''}`}
                   >
                     {editandoPreco ? 'Atualizar Preço' : 'Adicionar Preço'}
-                  </button>
+                  </Button>
                   {editandoPreco && (
-                    <button
+                    <Button
+                      variant="secondary"
                       onClick={() => {
                         setEditandoPreco(null);
                         setFormPrecoMensalista({ tipoEstacionavelId: '', valorMensal: '' });
                       }}
-                      className="btn-secondary"
                     >
                       Cancelar
-                    </button>
+                    </Button>
                   )}
                 </div>
               </div>
@@ -3591,10 +3593,15 @@ ${'='.repeat(50)}
           </div>
 
           {/* Botão Limpar Tudo */}
-          <button onClick={limparTudo} className="btn-danger w-full flex items-center justify-center gap-2">
+          <Button 
+            variant="danger" 
+            fullWidth
+            onClick={limparTudo}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: DESIGN.spacing.sm, marginTop: DESIGN.spacing.md }}
+          >
             <Trash2 className="w-5 h-5" />
             Limpar Todos os Dados
-          </button>
+          </Button>
           </>
           )}
         </div>
@@ -3974,23 +3981,26 @@ ${'='.repeat(50)}
                       <p className="text-center text-xs text-gray-600 mt-1">Tempo decorrido</p>
                     </div>
                     
-                    <div className="flex gap-2">
+                    <div style={{ display: 'flex', gap: DESIGN.spacing.sm }}>
                       {(impressoraConectada || impressoraUSBConectada) && (
-                        <button 
+                        <Button 
                           onClick={() => imprimirEntrada(veiculo)}
-                          className="btn-primary flex-1 flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700"
+                          variant="primary"
+                          fullWidth
+                          style={{ backgroundColor: DESIGN.colors.primary[600] }}
                         >
-                          <Printer className="w-5 h-5" />
+                          <Printer className="w-5 h-5" style={{ marginRight: DESIGN.spacing.xs }} />
                           Imprimir
-                        </button>
+                        </Button>
                       )}
-                      <button 
+                      <Button 
                         onClick={() => finalizarSaida(veiculo)}
-                        className="btn-primary flex-1 flex items-center justify-center gap-2"
+                        variant="primary"
+                        fullWidth
                       >
-                        <LogOut className="w-5 h-5" />
+                        <LogOut className="w-5 h-5" style={{ marginRight: DESIGN.spacing.xs }} />
                         FINALIZAR / SAÍDA
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 );
@@ -4010,22 +4020,25 @@ ${'='.repeat(50)}
             Digite a placa e finalize rapidamente sem procurar na lista do pátio.
           </p>
 
-          <input
+          <Input
             type="text"
             value={placaSaida}
             onChange={(e) => setPlacaSaida(formatarPlaca(e.target.value.toUpperCase()))}
             onKeyPress={(e) => e.key === 'Enter' && registrarSaidaPorPlaca()}
             placeholder="ABC-1234 ou ABC-1D23"
-            className="input-field text-center font-bold text-2xl tracking-wider mb-4"
+            style={{ textAlign: 'center', fontWeight: 700, fontSize: '1.5rem', letterSpacing: 'wider', marginBottom: DESIGN.spacing.md }}
             maxLength="8"
           />
 
-          <button
+          <Button
+            variant="primary"
+            fullWidth
             onClick={registrarSaidaPorPlaca}
-            className="btn-primary w-full text-xl py-4"
+            size="lg"
+            style={{ fontSize: '1.125rem', marginTop: DESIGN.spacing.md }}
           >
             LOCALIZAR E FINALIZAR SAÍDA
-          </button>
+          </Button>
         </div>
         )}
 
