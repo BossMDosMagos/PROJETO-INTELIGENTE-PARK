@@ -8,6 +8,10 @@ import { ModalConviteWhatsApp } from './components/ModalConviteWhatsApp';
 import { AbaSolicitacoesMensalistas } from './components/AbaSolicitacoesMensalistas';
 import { StatusConexao } from './components/StatusConexao';
 import { PaginaLogin } from './components/PaginaLogin';
+import DESIGN from './design-system';
+import HeaderRedesenhado from './components/HeaderRedesenhado';
+import { Button } from './components/Button';
+import { StatusSincronizacao } from './components/StatusSincronizacao';
 import { mensalistaService } from './services/mensalistaService';
 import { audioService } from './services/audioService';
 import { syncService } from './services/syncService';
@@ -187,6 +191,7 @@ function App() {
   const [showModalControleCaixa, setShowModalControleCaixa] = useState(false);
   const [showRelatorioFechamento, setShowRelatorioFechamento] = useState(false);
   const [valorCaixaAbreConfig, setValorCaixaAbreConfig] = useState('');
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   const showToast = (mensagem, tipo = 'info', duracao = 3500) => {
     const id = Date.now() + Math.random();
@@ -618,6 +623,15 @@ function App() {
       setTempoAtual(Date.now());
     }, 1000);
     return () => clearInterval(interval);
+  }, []);
+
+  // Detectar mudanças de tamanho de tela para mobile
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   // Função de cálculo de valor
@@ -3610,51 +3624,33 @@ ${'='.repeat(50)}
           </div>
         )}
 
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
-          <div className="flex items-center gap-3">
-            {config.logoUrl && (
-              <img 
-                src={config.logoUrl} 
-                alt="Logo" 
-                className="w-12 h-12 object-contain rounded-lg shadow-md"
-              />
-            )}
-            <h1 className="text-3xl font-bold text-blue-900 flex items-center gap-2">
-              {!config.logoUrl && <Car className="w-8 h-8" />}
-              {config.nomeEmpresa}
-            </h1>
-          </div>
+        {/* HEADER REDESENHADO */}
+        <HeaderRedesenhado
+          usuarioAutenticado={usuarioAutenticado}
+          pendenciasMensalistas={pendenciasMensalistas}
+          temDadosPendentes={supabaseService.temDadosPendentes?.() || false}
+          statusSincronizacao={{ sincronizado: true, offline: false, RLSDisabled: false }}
+          saldoCaixa={totalEmCaixa}
+          mostrarCaixa={mostrarTotalCaixa}
+          onToggleCaixa={(valor) => setMostrarTotalCaixa(valor)}
+          onNotificacoes={() => {
+            if (usuarioAutenticado) {
+              setTela('admin');
+              setSecaoAdmin('mensalistas');
+            } else {
+              setTela('login-admin');
+            }
+          }}
+          onLogout={() => {
+            supabaseService.logout();
+            setUsuarioAutenticado(null);
+          }}
+          onMenuToggle={() => setTela('login-admin')}
+          isMobile={isMobile}
+        />
 
-          {/* Total em Caixa (agora na tela principal) */}
-          {mostrarTotalCaixa && (
-            <div className="bg-gradient-to-r from-green-400 to-emerald-500 border-2 border-white shadow-xl px-4 py-2 rounded-lg flex items-center gap-2">
-              <DollarSign className="w-6 h-6 text-white" />
-              <div className="text-white">
-                <p className="text-xs font-medium">Caixa</p>
-                <p className="text-lg font-bold">R$ {totalEmCaixa.toFixed(2)}</p>
-              </div>
-              <button
-                onClick={() => setMostrarTotalCaixa(false)}
-                className="ml-2 p-1 hover:bg-white/20 rounded transition-colors"
-                title="Ocultar"
-              >
-                <EyeOff className="w-4 h-4 text-white" />
-              </button>
-            </div>
-          )}
-
-          {/* Botão para mostrar Total em Caixa quando oculto */}
-          {!mostrarTotalCaixa && (
-            <button
-              onClick={() => setMostrarTotalCaixa(true)}
-              className="bg-green-500 hover:bg-green-600 text-white p-2 rounded-lg shadow-md transition-all"
-              title="Mostrar Total em Caixa"
-            >
-              <Eye className="w-5 h-5" />
-            </button>
-          )}
-
+        {/* Controles Adicionais - Caixa + Impressoras */}
+        <div className="flex gap-2 mb-6 flex-wrap justify-end">
           {/* Botão Controle de Caixa */}
           <button
             onClick={() => setShowModalControleCaixa(true)}
@@ -3668,146 +3664,90 @@ ${'='.repeat(50)}
             <DollarSign className="w-6 h-6" />
           </button>
 
-          {/* Sino de Notificações - Mensalistas Pendentes */}
-          <button
-            onClick={() => {
-              // Verifica se está autenticado antes de abrir o admin
-              if (usuarioAutenticado) {
-                setTela('admin');
-                setSecaoAdmin('mensalistas');
-              } else {
-                // Se não estiver autenticado, vai para login
-                setTela('login-admin');
-              }
-            }}
-            className={`relative ${
-              pendenciasMensalistas > 0 
-                ? 'bg-yellow-500 hover:bg-yellow-600 animate-pulse' 
-                : 'bg-gray-400 hover:bg-gray-500'
-            } text-white p-3 rounded-lg shadow-md transition-all active:scale-95`}
-            title={
-              pendenciasMensalistas > 0 
-                ? `${pendenciasMensalistas} mensalista(s) pendente(s)` 
-                : 'Nenhum mensalista pendente'
-            }
-          >
-            <Bell className="w-6 h-6" />
-            {pendenciasMensalistas > 0 && (
-              <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
-                {pendenciasMensalistas}
-              </span>
-            )}
-          </button>
+          {/* Status Impressora + Conexão */}
+          <StatusConexao />
 
-          {/* Status Impressora + Conexão + Logout */}
-          <div className="flex items-center gap-2">
-            {/* User Info + Logout */}
-            <div className="bg-white border-2 border-blue-300 px-3 py-2 rounded-lg flex items-center gap-2 text-xs sm:text-sm">
-              <span className="text-blue-900 font-medium">{usuarioAutenticado?.email || 'User'}</span>
-              <button
-                onClick={() => {
-                  supabaseService.logout();
-                  setUsuarioAutenticado(null);
-                }}
-                className="ml-2 p-1 hover:bg-red-100 rounded transition-colors"
-                title="Sair"
-              >
-                <LogOut className="w-4 h-4 text-red-600" />
-              </button>
+          {statusImpressora && (
+            <div className="bg-white border-2 border-blue-300 text-blue-900 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium animate-pulse max-w-[130px] sm:max-w-[220px] truncate">
+              {statusImpressora}
             </div>
+          )}
+          {statusImpressoraUSB && (
+            <div className="bg-white border-2 border-purple-300 text-purple-900 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium animate-pulse max-w-[130px] sm:max-w-[220px] truncate">
+              {statusImpressoraUSB}
+            </div>
+          )}
 
-            {/* Status de Conexão (Offline-First) */}
-            <StatusConexao />
+          {/* Menu Impressoras (Bluetooth + USB) */}
+          <div className="relative group">
+            <button 
+              className={`p-3 rounded-lg shadow-md transition-all active:scale-95 flex items-center gap-2 text-white ${
+                (impressoraConectada || impressoraUSBConectada)
+                  ? 'bg-green-600 hover:bg-green-700' 
+                  : 'bg-blue-600 hover:bg-blue-700'
+              }`}
+              title="Gerenciar Impressoras"
+            >
+              <Printer className="w-5 h-5" />
+              <span className="text-lg">▼</span>
+            </button>
 
-            {statusImpressora && (
-              <div className="bg-white border-2 border-blue-300 text-blue-900 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium animate-pulse max-w-[130px] sm:max-w-[220px] truncate">
-                {statusImpressora}
-              </div>
-            )}
-            {statusImpressoraUSB && (
-              <div className="bg-white border-2 border-purple-300 text-purple-900 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium animate-pulse max-w-[130px] sm:max-w-[220px] truncate">
-                {statusImpressoraUSB}
-              </div>
-            )}
-
-            {/* Menu Impressoras (Bluetooth + USB) */}
-            <div className="relative group">
-              <button 
-                className={`p-3 rounded-lg shadow-md transition-all active:scale-95 flex items-center gap-2 text-white ${
-                  (impressoraConectada || impressoraUSBConectada)
-                    ? 'bg-green-600 hover:bg-green-700' 
-                    : 'bg-blue-600 hover:bg-blue-700'
-                }`}
-                title="Gerenciar Impressoras"
-              >
-                <Printer className="w-5 h-5" />
-                <span className="text-lg">▼</span>
-              </button>
-
-              {/* Dropdown Menu */}
-              <div className="absolute right-0 mt-0 w-80 bg-white rounded-lg shadow-xl border-2 border-gray-200 z-40 hidden group-hover:block">
-                <div className="p-4 space-y-4">
-                  {/* Bluetooth */}
-                  <div className="border-b pb-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <Bluetooth className="w-5 h-5 text-blue-600" />
-                        <span className="font-bold text-gray-800">Bluetooth</span>
-                      </div>
-                      {impressoraConectada && (
-                        <span className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></span>
-                      )}
+            {/* Dropdown Menu */}
+            <div className="absolute right-0 mt-0 w-80 bg-white rounded-lg shadow-xl border-2 border-gray-200 z-40 hidden group-hover:block">
+              <div className="p-4 space-y-4">
+                {/* Bluetooth */}
+                <div className="border-b pb-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <Bluetooth className="w-5 h-5 text-blue-600" />
+                      <span className="font-bold text-gray-800">Bluetooth</span>
                     </div>
-                    <p className="text-sm text-gray-600 mb-2">
-                      {impressoraConectada ? nomeImpressora : 'Desconectado'}
-                    </p>
-                    <button
-                      onClick={impressoraConectada ? desconectarImpressora : conectarImpressora}
-                      className={`w-full py-2 px-3 rounded-lg font-semibold transition-all text-sm ${
-                        impressoraConectada
-                          ? 'bg-red-500 hover:bg-red-600 text-white'
-                          : 'bg-blue-500 hover:bg-blue-600 text-white'
-                      }`}
-                    >
-                      {impressoraConectada ? 'Desconectar' : 'Conectar'}
-                    </button>
+                    {impressoraConectada && (
+                      <span className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></span>
+                    )}
                   </div>
+                  <p className="text-sm text-gray-600 mb-2">
+                    {impressoraConectada ? nomeImpressora : 'Desconectado'}
+                  </p>
+                  <button
+                    onClick={impressoraConectada ? desconectarImpressora : conectarImpressora}
+                    className={`w-full py-2 px-3 rounded-lg font-semibold transition-all text-sm ${
+                      impressoraConectada
+                        ? 'bg-red-500 hover:bg-red-600 text-white'
+                        : 'bg-blue-500 hover:bg-blue-600 text-white'
+                    }`}
+                  >
+                    {impressoraConectada ? 'Desconectar' : 'Conectar'}
+                  </button>
+                </div>
 
-                  {/* USB */}
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <AlertTriangle className="w-5 h-5 text-purple-600" />
-                        <span className="font-bold text-gray-800">USB / Serial</span>
-                      </div>
-                      {impressoraUSBConectada && (
-                        <span className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></span>
-                      )}
+                {/* USB */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="w-5 h-5 text-purple-600" />
+                      <span className="font-bold text-gray-800">USB / Serial</span>
                     </div>
-                    <p className="text-sm text-gray-600 mb-2">
-                      {impressoraUSBConectada ? nomeImpressoraUSB : 'Desconectado'}
-                    </p>
-                    <button
-                      onClick={impressoraUSBConectada ? desconectarImpressoraUSB : conectarImpressoraUSB}
-                      className={`w-full py-2 px-3 rounded-lg font-semibold transition-all text-sm ${
-                        impressoraUSBConectada
-                          ? 'bg-red-500 hover:bg-red-600 text-white'
-                          : 'bg-purple-500 hover:bg-purple-600 text-white'
-                      }`}
-                    >
-                      {impressoraUSBConectada ? 'Desconectar' : (tentarSerialNoProximoClique ? 'Tentar Serial' : 'Conectar')}
-                    </button>
+                    {impressoraUSBConectada && (
+                      <span className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></span>
+                    )}
                   </div>
+                  <p className="text-sm text-gray-600 mb-2">
+                    {impressoraUSBConectada ? nomeImpressoraUSB : 'Desconectado'}
+                  </p>
+                  <button
+                    onClick={impressoraUSBConectada ? desconectarImpressoraUSB : conectarImpressoraUSB}
+                    className={`w-full py-2 px-3 rounded-lg font-semibold transition-all text-sm ${
+                      impressoraUSBConectada
+                        ? 'bg-red-500 hover:bg-red-600 text-white'
+                        : 'bg-purple-500 hover:bg-purple-600 text-white'
+                    }`}
+                  >
+                    {impressoraUSBConectada ? 'Desconectar' : (tentarSerialNoProximoClique ? 'Tentar Serial' : 'Conectar')}
+                  </button>
                 </div>
               </div>
             </div>
-
-            <button 
-              onClick={() => setTela('login-admin')} 
-              className="bg-gray-700 hover:bg-gray-800 text-white p-3 rounded-lg shadow-md transition-all active:scale-95"
-            >
-              <Settings className="w-6 h-6" />
-            </button>
           </div>
         </div>
 
