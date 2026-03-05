@@ -2028,48 +2028,41 @@ ${'='.repeat(50)}
             <div className="grid md:grid-cols-2 gap-4 mb-5">
               <div>
                 <label className="block text-sm font-semibold mb-2">Nome do operador (login)</label>
-                <input
+                <Input
                   type="text"
                   value={formOperador.operador}
                   onChange={(e) => setFormOperador({ ...formOperador, operador: e.target.value })}
-                  className="input-field"
                   placeholder="ex: joao"
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-semibold mb-2">Nome completo</label>
-                <input
+                <Input
                   type="text"
                   value={formOperador.nomeCompleto}
                   onChange={(e) => setFormOperador({ ...formOperador, nomeCompleto: e.target.value })}
-                  className="input-field"
                   placeholder="ex: João da Silva"
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-semibold mb-2">Senha inicial</label>
-                <input
+                <Input
                   type="password"
                   value={formOperador.senha}
                   onChange={(e) => setFormOperador({ ...formOperador, senha: e.target.value })}
-                  className="input-field"
                   placeholder="mínimo 6 caracteres"
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-semibold mb-2">Política de acesso</label>
-                <select
+                <Select
                   value={formOperador.nivelAcesso}
                   onChange={(e) => setFormOperador({ ...formOperador, nivelAcesso: e.target.value })}
-                  className="input-field"
-                >
-                  {niveisAcessoDisponiveis.map((nivel) => (
-                    <option key={nivel} value={nivel}>{nivel}</option>
-                  ))}
-                </select>
+                  options={niveisAcessoDisponiveis.map((nivel) => ({ value: nivel, label: nivel }))}
+                />
               </div>
             </div>
 
@@ -2173,90 +2166,82 @@ ${'='.repeat(50)}
             <div className="grid md:grid-cols-2 gap-4 mb-5">
               <div>
                 <label className="block text-sm font-semibold mb-2">Nome do Pátio *</label>
-                <input
+                <Input
                   type="text"
                   value={formPatio.nome}
                   onChange={(e) => setFormPatio({ ...formPatio, nome: e.target.value })}
-                  className="input-field"
                   placeholder="ex: Pátio Centro"
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-semibold mb-2">Cidade</label>
-                <input
+                <Input
                   type="text"
                   value={formPatio.cidade}
                   onChange={(e) => setFormPatio({ ...formPatio, cidade: e.target.value })}
-                  className="input-field"
                   placeholder="ex: São Paulo"
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-semibold mb-2">Endereço</label>
-                <input
+                <Input
                   type="text"
                   value={formPatio.endereco}
                   onChange={(e) => setFormPatio({ ...formPatio, endereco: e.target.value })}
-                  className="input-field"
                   placeholder="ex: Rua Santos, 100"
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-semibold mb-2">Estado (UF)</label>
-                <input
+                <Input
                   type="text"
                   value={formPatio.estado}
                   onChange={(e) => setFormPatio({ ...formPatio, estado: e.target.value.toUpperCase() })}
                   maxLength="2"
-                  className="input-field"
                   placeholder="ex: SP"
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-semibold mb-2">Quantidade de Vagas</label>
-                <input
+                <Input
                   type="number"
                   value={formPatio.qtd_vagas}
                   onChange={(e) => setFormPatio({ ...formPatio, qtd_vagas: e.target.value })}
-                  className="input-field"
                   placeholder="ex: 150"
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-semibold mb-2">Telefone</label>
-                <input
+                <Input
                   type="text"
                   value={formPatio.telefone}
                   onChange={(e) => setFormPatio({ ...formPatio, telefone: e.target.value })}
-                  className="input-field"
                   placeholder="ex: (11) 9999-9999"
                 />
               </div>
 
               <div className="md:col-span-2">
                 <label className="block text-sm font-semibold mb-2">E-mail</label>
-                <input
+                <Input
                   type="email"
                   value={formPatio.email}
                   onChange={(e) => setFormPatio({ ...formPatio, email: e.target.value })}
-                  className="input-field"
                   placeholder="ex: contato@patio.com.br"
                 />
               </div>
 
               <div className="md:col-span-2">
                 <label className="block text-sm font-semibold mb-2">Descrição</label>
-                <textarea
+                <TextArea
                   value={formPatio.descricao}
                   onChange={(e) => setFormPatio({ ...formPatio, descricao: e.target.value })}
-                  className="input-field"
                   placeholder="Informações adicionais sobre o pátio..."
-                  rows="3"
+                  rows={3}
                 />
               </div>
             </div>
