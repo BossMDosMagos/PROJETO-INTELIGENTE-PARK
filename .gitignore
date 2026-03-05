@@ -73,11 +73,8 @@ web_modules/
 .yarn-integrity
 
 # dotenv environment variable files
-.env
-.env.development.local
-.env.test.local
-.env.production.local
-.env.local
+# .env files are tracked for Supabase credentials in production
+# .env.local is committed for GitHub Pages deployment
 
 # parcel-bundler cache (https://parceljs.org/)
 .cache
@@ -140,10 +137,10 @@ dist
 # Supabase
 # ========================================
 
-# Variáveis de ambiente (NUNCA COMMITAR!)
-.env
-.env.local
-.env.*.local
+# Variáveis de ambiente - tracked for production deployment
+# .env
+# .env.local is committed for GitHub Pages to work
+# .env.*.local
 
 # Supabase local
 .supabase/
