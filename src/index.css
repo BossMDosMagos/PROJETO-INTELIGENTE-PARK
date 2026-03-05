@@ -1,3 +1,6 @@
+/* Importar estilos responsivos */
+@import './responsive.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
