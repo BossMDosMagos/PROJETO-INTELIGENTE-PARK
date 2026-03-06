@@ -40,6 +40,9 @@ export function Input({
   error = '',
   hint = '',
   className = '',
+  ariaLabel = '',
+  ariaDescribedBy = '',
+  required = false,
   ...otherProps
 }) {
   const variantStyles = {
@@ -80,10 +83,20 @@ export function Input({
   const bgColor = error ? variantStyles.error.bg : variantStyle.bg;
   const focusBgColor = error ? variantStyles.error.focusBg : variantStyle.focusBg;
 
+  // Gerar IDs únicos para acessibilidade
+  const errorId = `error-${Math.random().toString(36).substr(2, 9)}`;
+  const hintId = `hint-${Math.random().toString(36).substr(2, 9)}`;
+  const describedBy = [
+    ...(error ? [errorId] : []),
+    ...(hint ? [hintId] : []),
+    ...(ariaDescribedBy ? [ariaDescribedBy] : [])
+  ].join(' ');
+
   return (
     <div style={{ width: fullWidth ? '100%' : 'auto' }}>
       {label && (
         <label
+          htmlFor={otherProps.id}
           style={{
             display: 'block',
             fontSize: DESIGN.typography.sizes.sm,
@@ -93,6 +106,7 @@ export function Input({
           }}
         >
           {label}
+          {required && <span style={{ color: DESIGN.colors.danger[600], marginLeft: '4px' }}>*</span>}
         </label>
       )}
 
@@ -102,6 +116,10 @@ export function Input({
         onChange={onChange}
         placeholder={placeholder}
         disabled={disabled}
+        aria-label={ariaLabel || label}
+        aria-describedby={describedBy || undefined}
+        aria-invalid={!!error}
+        aria-required={required}
         style={{
           width: '100%',
           padding: `${DESIGN.spacing.md}px ${DESIGN.spacing.lg}px`,
@@ -143,6 +161,8 @@ export function Input({
       {/* Error message */}
       {error && (
         <p
+          id={errorId}
+          role="alert"
           style={{
             marginTop: `${DESIGN.spacing.xs}px`,
             fontSize: DESIGN.typography.sizes.sm,
@@ -157,6 +177,7 @@ export function Input({
       {/* Helper text */}
       {hint && !error && (
         <p
+          id={hintId}
           style={{
             marginTop: `${DESIGN.spacing.xs}px`,
             fontSize: DESIGN.typography.sizes.xs,

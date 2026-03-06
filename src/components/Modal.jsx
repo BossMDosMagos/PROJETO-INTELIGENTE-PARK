@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import DESIGN from '../design-system';
 
 /**
@@ -65,6 +65,51 @@ export function Modal({
     };
   }, [isOpen]);
 
+  // Focus trap - manter foco dentro do modal
+  const modalRef = useRef(null);
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (e) => {
+      if (e.key !== 'Tab') return;
+
+      const focusableElements = modalRef.current?.querySelectorAll(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      
+      if (!focusableElements || focusableElements.length === 0) return;
+
+      const firstElement = focusableElements[0];
+      const lastElement = focusableElements[focusableElements.length - 1];
+
+      if (e.shiftKey) {
+        // Shift+Tab
+        if (document.activeElement === firstElement) {
+          e.preventDefault();
+          lastElement.focus();
+        }
+      } else {
+        // Tab
+        if (document.activeElement === lastElement) {
+          e.preventDefault();
+          firstElement.focus();
+        }
+      }
+    };
+
+    modalRef.current?.addEventListener('keydown', handleKeyDown);
+    
+    // Focar no primeiro elemento do modal quando abrir
+    const firstFocusable = modalRef.current?.querySelector(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    );
+    firstFocusable?.focus();
+
+    return () => {
+      modalRef.current?.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const sizeMap = {
@@ -97,6 +142,11 @@ export function Modal({
     >
       {/* Modal Content */}
       <div
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={title ? 'modal-title' : undefined}
+        aria-describedby={subtitle ? 'modal-subtitle' : undefined}
         style={{
           backgroundColor: 'white',
           borderRadius: DESIGN.border.radius.lg,
@@ -127,6 +177,7 @@ export function Modal({
           <div style={{ flex: 1 }}>
             {title && (
               <h2
+                id="modal-title"
                 style={{
                   margin: 0,
                   marginBottom: subtitle ? `${DESIGN.spacing.xs}px` : 0,
@@ -140,6 +191,7 @@ export function Modal({
             )}
             {subtitle && (
               <p
+                id="modal-subtitle"
                 style={{
                   margin: 0,
                   fontSize: DESIGN.typography.sizes.sm,

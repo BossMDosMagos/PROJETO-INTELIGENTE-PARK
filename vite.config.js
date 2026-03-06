@@ -68,5 +68,70 @@ export default defineConfig({
   ],
   server: {
     port: 3000
+  },
+  build: {
+    // Otimizações de build
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true,
+        drop_debugger: true
+      }
+    },
+    // Code splitting estratégico
+    rollupOptions: {
+      output: {
+        manualChunks: (id) => {
+          // Vendor libraries
+          if (id.includes('node_modules/react')) {
+            return 'vendor-react';
+          }
+          if (id.includes('node_modules/framer-motion')) {
+            return 'vendor-animations';
+          }
+          if (id.includes('node_modules/lucide-react')) {
+            return 'vendor-lucide';
+          }
+          
+          // Components grouping
+          if (id.includes('src/components')) {
+            if (id.includes('Table.jsx') || id.includes('SearchBar.jsx') || id.includes('FilterBar.jsx')) {
+              return 'components-tables';
+            }
+            if (id.includes('AnimationManager.jsx')) {
+              return 'components-animations';
+            }
+            return 'components-ui';
+          }
+          
+          // Services layer
+          if (id.includes('src/services')) {
+            return 'services';
+          }
+          
+          // Hooks layer
+          if (id.includes('src/hooks')) {
+            return 'hooks';
+          }
+          
+          // Utils layer
+          if (id.includes('src/utils')) {
+            return 'utils';
+          }
+        }
+      }
+    },
+    // Chunk size warning threshold
+    chunkSizeWarningLimit: 600,
+    
+    // Source map apenas em development
+    sourcemap: process.env.NODE_ENV === 'development',
+    
+    // Otimizações de CSS
+    cssMinify: true
+  },
+  optimize: {
+    // Pre-bundle dependencies
+    include: ['react', 'react-dom', 'framer-motion', 'lucide-react']
   }
 });

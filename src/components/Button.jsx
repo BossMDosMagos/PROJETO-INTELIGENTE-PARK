@@ -17,6 +17,8 @@ export function Button({
   disabled = false,
   className = '',
   onClick,
+  ariaLabel = '',
+  ariaDescribedBy = '',
   ...props
 }) {
   // Variações de cores
@@ -95,12 +97,16 @@ export function Button({
     <button
       onClick={onClick}
       disabled={disabled || loading}
+      aria-label={ariaLabel || (typeof children === 'string' ? children : '')}
+      aria-disabled={disabled || loading}
+      aria-describedby={ariaDescribedBy}
+      aria-busy={loading}
       className={`
         rounded-lg font-semibold transition-all
         flex items-center justify-center gap-2
         disabled:cursor-not-allowed
         active:scale-95
-        focus-visible:outline-none focus-visible:ring-2
+        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2
         ${fullWidth ? 'w-full' : ''}
         ${className}
       `}
@@ -133,7 +139,7 @@ export function Button({
       {...props}
     >
       {loading && (
-        <span className="inline-block animate-spin">
+        <span className="inline-block animate-spin" aria-hidden="true">
           <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <circle cx="12" cy="12" r="10" opacity="0.3" />
             <path d="M12 2a10 10 0 0 1 10 10" strokeLinecap="round" />
@@ -142,13 +148,13 @@ export function Button({
       )}
 
       {Icon && !iconRight && !loading && (
-        <Icon size={20} />
+        <Icon size={20} aria-hidden="true" />
       )}
 
       {children && <span>{children}</span>}
 
       {Icon && iconRight && !loading && (
-        <Icon size={20} />
+        <Icon size={20} aria-hidden="true" />
       )}
     </button>
   );

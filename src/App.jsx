@@ -1,13 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useLocalStorage } from './useLocalStorage';
 import BluetoothPrinter from './BluetoothPrinter';
 import USBPrinter from './USBPrinter';
-import { PaginaCadastroMensalista } from './components/PaginaCadastroMensalista';
-import { PaginaCadastroPublico } from './PaginaCadastroPublico';
 import { ModalConviteWhatsApp } from './components/ModalConviteWhatsApp';
-import { AbaSolicitacoesMensalistas } from './components/AbaSolicitacoesMensalistas';
 import { StatusConexao } from './components/StatusConexao';
-import { PaginaLogin } from './components/PaginaLogin';
+// Accessibility styles
+import './accessibility.css';
+// Lazy-loaded pages for code splitting
+import { 
+  PaginaCadastroPublicoLazy,
+  PaginaCadastroMensalistaLazy,
+  PaginaLoginLazy,
+  AbaSolicitacoesMensalistasLazy,
+  LazyPage,
+  prefetchPages
+} from './pages/index.jsx';
 import DESIGN from './design-system';
 import HeaderRedesenhado from './components/HeaderRedesenhado';
 import { Button } from './components/Button';
@@ -16,6 +23,7 @@ import { Input, TextArea, Select } from './components/Input';
 import { Card, CardGrid, Alert, Badge } from './components/Card';
 import { Modal, ConfirmDialog, Drawer } from './components/Modal';
 import { Table, DataGrid } from './components/Table';
+import { VirtualizedList } from './components/VirtualizedList';
 import { mensalistaService } from './services/mensalistaService';
 import { audioService } from './services/audioService';
 import { syncService } from './services/syncService';
@@ -232,6 +240,11 @@ function App() {
     }
   }, []);
 
+  // Preload lazy pages when browser is idle
+  useEffect(() => {
+    prefetchPages();
+  }, []);
+
   // Inicializar Supabase e restaurar sessão ao recarregar
   useEffect(() => {
     let ativo = true;
@@ -278,25 +291,27 @@ function App() {
 
 
   const renderToasts = () => (
-    <div className="fixed top-4 right-4 z-[100] w-[min(92vw,360px)] space-y-2">
-      {toasts.map((toast) => {
-        const estilo = {
-          success: 'bg-green-50 border-green-300 text-green-900',
-          error: 'bg-red-50 border-red-300 text-red-900',
-          warning: 'bg-amber-50 border-amber-300 text-amber-900',
-          info: 'bg-blue-50 border-blue-300 text-blue-900'
-        }[toast.tipo] || 'bg-blue-50 border-blue-300 text-blue-900';
-
-        return (
-          <div key={toast.id} className={`rounded-lg border px-3 py-2 shadow-lg flex items-start gap-2 ${estilo}`}>
-            <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
-            <p className="text-sm font-medium leading-5 flex-1">{toast.mensagem}</p>
-            <button onClick={() => removerToast(toast.id)} className="text-xs font-bold opacity-70 hover:opacity-100">
-              ✕
-            </button>
-          </div>
-        );
-      })}
+    <div style={{
+      position: 'fixed',
+      top: DESIGN.spacing.lg,
+      right: DESIGN.spacing.lg,
+      zIndex: 1000,
+      width: 'min(92vw, 360px)',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: DESIGN.spacing.md,
+      pointerEvents: 'auto'
+    }}>
+      {toasts.map((toast) => (
+        <Alert
+          key={toast.id}
+          type={toast.tipo}
+          dismissible
+          onDismiss={() => removerToast(toast.id)}
+        >
+          {toast.mensagem}
+        </Alert>
+      ))}
     </div>
   );
 
@@ -1747,18 +1762,18 @@ ${'='.repeat(50)}
     }, 'Deletar por mês');
   };
 
-  // Obtém datas únicas do histórico
-  const obterDatasUnicas = () => {
+  // Obtém datas únicas do histórico (memoizado)
+  const datasUnicasHistorico = useMemo(() => {
     const datas = new Set();
     historico.forEach(reg => {
       const data = new Date(reg.saida).toLocaleDateString('pt-BR');
       datas.add(data);
     });
     return Array.from(datas).sort((a, b) => new Date(b.split('/').reverse().join('-')) - new Date(a.split('/').reverse().join('-')));
-  };
+  }, [historico]);
 
-  // Obtém meses únicos do histórico
-  const obterMesesUnicos = () => {
+  // Obtém meses únicos do histórico (memoizado)
+  const mesesUnicosHistorico = useMemo(() => {
     const meses = new Set();
     historico.forEach(reg => {
       const data = new Date(reg.saida);
@@ -1767,7 +1782,12 @@ ${'='.repeat(50)}
       meses.add(`${mes}/${ano}`);
     });
     return Array.from(meses).sort().reverse();
-  };
+  }, [historico]);
+
+  const opcoesMesesDelecao = useMemo(() => ([
+    { value: '', label: 'Selecione um mês...' },
+    ...mesesUnicosHistorico.map((mesAno) => ({ value: mesAno, label: mesAno }))
+  ]), [mesesUnicosHistorico]);
 
   // Limpar todos os dados
   const limparTudo = () => {
@@ -1779,13 +1799,137 @@ ${'='.repeat(50)}
     }, 'Limpar todos os dados');
   };
 
-  // Calcula total em caixa
-  const totalEmCaixa = historico.reduce((sum, reg) => sum + reg.valor, 0);
+  // Calcula total em caixa (memoizado)
+  const totalEmCaixa = useMemo(
+    () => historico.reduce((sum, reg) => sum + reg.valor, 0),
+    [historico]
+  );
+
+  const historicoGridData = useMemo(() => (
+    historico.map((reg) => ({
+      id: reg.id,
+      placa: reg.placa,
+      modelo: reg.modelo,
+      tipo: reg.tipo === 'moto' ? '🏍️ Moto' : '🚗 Carro',
+      entrada: new Date(reg.entrada).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+      saida: new Date(reg.saida).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+      permanencia: formatarTempo(reg.permanencia),
+      valor: `R$ ${reg.valor.toFixed(2)}`
+    }))
+  ), [historico]);
+
+  const usarVirtualizacaoHistorico = historicoGridData.length > 500;
+ 
+ // Memoizar colunas do histórico
+ const colunasHistorico = useMemo(() => [
+   { key: 'placa', label: 'Placa', width: '80px' },
+   { key: 'modelo', label: 'Modelo', width: '100px' },
+   { key: 'tipo', label: 'Tipo', width: '80px' },
+   { key: 'entrada', label: 'Entrada', width: '120px' },
+   { key: 'saida', label: 'Saída', width: '120px' },
+   { key: 'permanencia', label: 'Permanência', width: '100px' },
+   { key: 'valor', label: 'Valor (R$)', width: '90px', align: 'right' }
+ ], []);
+
+  const niveisAcessoOptions = useMemo(
+    () => niveisAcessoDisponiveis.map((nivel) => ({ value: nivel, label: nivel })),
+    [niveisAcessoDisponiveis]
+  );
+
+  const operadoresAdminTableData = useMemo(
+    () => operadoresAdmin.map((operador) => {
+      const nivelOperador = String(operador?.nivelAcesso || '').toUpperCase();
+      const nivelAutenticado = String(usuarioAutenticado?.nivelAcesso || '').toUpperCase();
+      const ehMaster = nivelOperador === 'MASTER';
+      const ehVoceMesmo = usuarioAutenticado?.id === operador?.id;
+      const podeDeleter = !ehMaster || (nivelAutenticado === 'MASTER' && !ehVoceMesmo);
+
+      return {
+        id: operador.id,
+        nomeCompleto: (
+          <div style={{ display: 'flex', alignItems: 'center', gap: DESIGN.spacing.sm }}>
+            <span style={{ fontWeight: '600' }}>{operador.nomeCompleto}</span>
+            {ehMaster && <Badge variant="danger" size="sm">MASTER</Badge>}
+            {ehVoceMesmo && <Badge variant="primary" size="sm">VOCÊ</Badge>}
+          </div>
+        ),
+        email: operador.email || <span style={{ color: DESIGN.colors.neutral[400] }}>n/a</span>,
+        nivelAcesso: operador.nivelAcesso,
+        status: ehVoceMesmo ? (
+          <Badge variant="primary" size="sm">Você</Badge>
+        ) : ehMaster ? (
+          <Badge variant="danger" size="sm">Master</Badge>
+        ) : (
+          <Badge variant="success" size="sm">Ativo</Badge>
+        ),
+        acao: (
+          <Button
+            variant="danger"
+            size="sm"
+            onClick={() => setConfirmDialog({
+              titulo: 'Remover operador',
+              mensagem: `Confirma remover o operador ${operador.nomeCompleto}?`,
+              onConfirm: () => removerOperadorAdmin(operador)
+            })}
+            disabled={!podeDeleter}
+            title={
+              !podeDeleter
+                ? ehVoceMesmo
+                  ? 'Você não pode se deletar'
+                  : 'Apenas MASTER pode deletar MASTER'
+                : 'Deletar operador'
+            }
+          >
+            <Trash2 className="w-4 h-4" style={{ marginRight: DESIGN.spacing.xs }} />
+            Deletar
+          </Button>
+        )
+      };
+    }),
+    [operadoresAdmin, usuarioAutenticado]
+  );
+
+  const patiosAdminTableData = useMemo(
+    () => patiosAdmin.map((patio) => ({
+      id: patio.id,
+      nome: <span style={{ fontWeight: '600' }}>{patio.nome}</span>,
+      localizacao: (
+        <div style={{ fontSize: DESIGN.typography.sizes.sm, color: DESIGN.colors.neutral[600] }}>
+          {patio.endereco && <div>{patio.endereco}</div>}
+          {(patio.cidade || patio.estado) && (
+            <div>{patio.cidade && `${patio.cidade}, `}{patio.estado}</div>
+          )}
+        </div>
+      ),
+      vagas: patio.qtd_vagas > 0 ? (
+        <Badge variant="primary" size="sm">{patio.qtd_vagas}</Badge>
+      ) : (
+        <span style={{ color: DESIGN.colors.neutral[400] }}>-</span>
+      ),
+      telefone: patio.telefone || <span style={{ color: DESIGN.colors.neutral[400] }}>n/a</span>,
+      acao: (
+        <Button
+          variant="danger"
+          size="sm"
+          onClick={() => setConfirmDialog({
+            titulo: 'Remover pátio',
+            mensagem: `Confirma remover o pátio "${patio.nome}"?`,
+            onConfirm: () => removerPatioAdmin(patio)
+          })}
+        >
+          <Trash2 className="w-4 h-4" style={{ marginRight: DESIGN.spacing.xs }} />
+          Deletar
+        </Button>
+      )
+    })),
+    [patiosAdmin]
+  );
 
   // MODO CADASTRO PÚBLICO (Via link WhatsApp)
   if (modoCadastroPublico) {
     return (
-      <PaginaCadastroPublico 
+      <LazyPage 
+        component={PaginaCadastroPublicoLazy}
         onVoltar={() => {
           setModoCadastroPublico(false);
           window.history.replaceState({}, document.title, window.location.pathname);
@@ -1798,7 +1942,7 @@ ${'='.repeat(50)}
   if (tela === 'cadastro-mensalista') {
     return (
       <>
-        <PaginaCadastroMensalista />
+        <LazyPage component={PaginaCadastroMensalistaLazy} />
         {renderToasts()}
       </>
     );
@@ -1877,108 +2021,131 @@ ${'='.repeat(50)}
             </div>
 
             {/* Grade de Botões */}
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <CardGrid columns={3} gap="lg">
               {/* Gestão de Operadores */}
-              <button
+              <Card 
+                variant="primary"
                 onClick={() => setSecaoAdmin('operadores')}
-                className="bg-white hover:bg-blue-50 border-2 border-blue-200 rounded-lg p-6 transition-all hover:scale-105 hover:shadow-xl text-left"
+                interactive
               >
-                <Users className="w-10 h-10 text-blue-600 mb-3" />
-                <h2 className="text-xl font-bold text-gray-900">Gestão de Operadores</h2>
-                <p className="text-sm text-gray-600 mt-2">Criar e gerenciar operadores com políticas de acesso</p>
-              </button>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: DESIGN.spacing.sm }}>
+                  <Users className="w-10 h-10" style={{ color: DESIGN.colors.primary[600] }} />
+                  <h2 className="text-xl font-bold text-gray-900">Gestão de Operadores</h2>
+                  <p className="text-sm text-gray-600 mt-2">Criar e gerenciar operadores com políticas de acesso</p>
+                </div>
+              </Card>
 
               {/* Gestão de Pátios */}
-              <button
+              <Card 
+                variant="success"
                 onClick={() => setSecaoAdmin('patios')}
-                className="bg-white hover:bg-green-50 border-2 border-green-200 rounded-lg p-6 transition-all hover:scale-105 hover:shadow-xl text-left"
+                interactive
               >
-                <Home className="w-10 h-10 text-green-600 mb-3" />
-                <h2 className="text-xl font-bold text-gray-900">Gestão de Pátios</h2>
-                <p className="text-sm text-gray-600 mt-2">Cadastrar e gerenciar pátios de estacionamento</p>
-              </button>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: DESIGN.spacing.sm }}>
+                  <Home className="w-10 h-10" style={{ color: DESIGN.colors.success[600] }} />
+                  <h2 className="text-xl font-bold text-gray-900">Gestão de Pátios</h2>
+                  <p className="text-sm text-gray-600 mt-2">Cadastrar e gerenciar pátios de estacionamento</p>
+                </div>
+              </Card>
 
               {/* Impressoras */}
-              <button
+              <Card 
+                variant="warning"
                 onClick={() => setSecaoAdmin('impressoras')}
-                className="bg-white hover:bg-purple-50 border-2 border-purple-200 rounded-lg p-6 transition-all hover:scale-105 hover:shadow-xl text-left"
+                interactive
               >
-                <Printer className="w-10 h-10 text-purple-600 mb-3" />
-                <h2 className="text-xl font-bold text-gray-900">Impressoras</h2>
-                <p className="text-sm text-gray-600 mt-2">Configurar impressoras Bluetooth e USB</p>
-              </button>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: DESIGN.spacing.sm }}>
+                  <Printer className="w-10 h-10" style={{ color: DESIGN.colors.warning[600] }} />
+                  <h2 className="text-xl font-bold text-gray-900">Impressoras</h2>
+                  <p className="text-sm text-gray-600 mt-2">Configurar impressoras Bluetooth e USB</p>
+                </div>
+              </Card>
 
               {/* Personalização */}
-              <button
+              <Card 
+                variant="primary"
                 onClick={() => setSecaoAdmin('empresa')}
-                className="bg-white hover:bg-pink-50 border-2 border-pink-200 rounded-lg p-6 transition-all hover:scale-105 hover:shadow-xl text-left"
+                interactive
               >
-                <Car className="w-10 h-10 text-pink-600 mb-3" />
-                <h2 className="text-xl font-bold text-gray-900">Personalização da Empresa</h2>
-                <p className="text-sm text-gray-600 mt-2">Nome, CNPJ, logo e dados da empresa</p>
-              </button>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: DESIGN.spacing.sm }}>
+                  <Car className="w-10 h-10" style={{ color: DESIGN.colors.primary[600] }} />
+                  <h2 className="text-xl font-bold text-gray-900">Personalização da Empresa</h2>
+                  <p className="text-sm text-gray-600 mt-2">Nome, CNPJ, logo e dados da empresa</p>
+                </div>
+              </Card>
 
               {/* Configuração de Ticket */}
-              <button
+              <Card 
+                variant="primary"
                 onClick={() => setSecaoAdmin('ticket')}
-                className="bg-white hover:bg-indigo-50 border-2 border-indigo-200 rounded-lg p-6 transition-all hover:scale-105 hover:shadow-xl text-left"
+                interactive
               >
-                <Printer className="w-10 h-10 text-indigo-600 mb-3" />
-                <h2 className="text-xl font-bold text-gray-900">Configuração de Ticket</h2>
-                <p className="text-sm text-gray-600 mt-2">Layout, fontes e formatação de impressão</p>
-              </button>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: DESIGN.spacing.sm }}>
+                  <Printer className="w-10 h-10" style={{ color: DESIGN.colors.primary[600] }} />
+                  <h2 className="text-xl font-bold text-gray-900">Configuração de Ticket</h2>
+                  <p className="text-sm text-gray-600 mt-2">Layout, fontes e formatação de impressão</p>
+                </div>
+              </Card>
 
               {/* Preços */}
-              <button
+              <Card 
+                variant="warning"
                 onClick={() => setSecaoAdmin('precos')}
-                className="bg-white hover:bg-yellow-50 border-2 border-yellow-200 rounded-lg p-6 transition-all hover:scale-105 hover:shadow-xl text-left"
+                interactive
               >
-                <DollarSign className="w-10 h-10 text-yellow-600 mb-3" />
-                <h2 className="text-xl font-bold text-gray-900">Configurações de Preço</h2>
-                <p className="text-sm text-gray-600 mt-2">Valores, frações e tetos de cobrança</p>
-              </button>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: DESIGN.spacing.sm }}>
+                  <DollarSign className="w-10 h-10" style={{ color: DESIGN.colors.warning[600] }} />
+                  <h2 className="text-xl font-bold text-gray-900">Configurações de Preço</h2>
+                  <p className="text-sm text-gray-600 mt-2">Valores, frações e tetos de cobrança</p>
+                </div>
+              </Card>
 
               {/* Gerenciamento de Registros */}
-              <button
+              <Card 
+                variant="danger"
                 onClick={() => setSecaoAdmin('registros')}
-                className="bg-white hover:bg-red-50 border-2 border-red-200 rounded-lg p-6 transition-all hover:scale-105 hover:shadow-xl text-left"
+                interactive
               >
-                <Trash2 className="w-10 h-10 text-red-600 mb-3" />
-                <h2 className="text-xl font-bold text-gray-900">Gerenciamento de Registros</h2>
-                <p className="text-sm text-gray-600 mt-2">Deletar registros por dia, mês ou individual</p>
-              </button>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: DESIGN.spacing.sm }}>
+                  <Trash2 className="w-10 h-10" style={{ color: DESIGN.colors.danger[600] }} />
+                  <h2 className="text-xl font-bold text-gray-900">Gerenciamento de Registros</h2>
+                  <p className="text-sm text-gray-600 mt-2">Deletar registros por dia, mês ou individual</p>
+                </div>
+              </Card>
 
               {/* Controle de Cadastros */}
-              <button
+              <Card 
+                variant="success"
                 onClick={() => setSecaoAdmin('mensalistas')}
-                className="bg-white hover:bg-emerald-50 border-2 border-emerald-200 rounded-lg p-6 transition-all hover:scale-105 hover:shadow-xl text-left"
+                interactive
               >
-                <Users className="w-10 h-10 text-emerald-600 mb-3" />
-                <h2 className="text-xl font-bold text-gray-900">Controle de Cadastros</h2>
-                <p className="text-sm text-gray-600 mt-2">Gerenciar solicitações de mensalistas</p>
-                {pendenciasMensalistas > 0 && (
-                  <span className="inline-block mt-2 bg-red-500 text-white px-3 py-1 rounded-full text-xs font-bold">
-                    {pendenciasMensalistas} pendente(s)
-                  </span>
-                )}
-              </button>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: DESIGN.spacing.sm }}>
+                  <Users className="w-10 h-10" style={{ color: DESIGN.colors.success[600] }} />
+                  <h2 className="text-xl font-bold text-gray-900">Controle de Cadastros</h2>
+                  <p className="text-sm text-gray-600 mt-2">Gerenciar solicitações de mensalistas</p>
+                  {pendenciasMensalistas > 0 && (
+                    <Badge variant="danger" size="sm" style={{ marginTop: DESIGN.spacing.sm }}>
+                      {pendenciasMensalistas} pendente(s)
+                    </Badge>
+                  )}
+                </div>
+              </Card>
 
               {/* Controle de Caixa */}
-              <button
+              <Card 
+                variant={caixaAberto ? "success" : "warning"}
                 onClick={() => setShowModalControleCaixa(true)}
-                className={`border-2 rounded-lg p-6 transition-all hover:scale-105 hover:shadow-xl text-left ${
-                  caixaAberto
-                    ? 'bg-emerald-50 border-emerald-200 hover:bg-emerald-100'
-                    : 'bg-white hover:bg-amber-50 border-amber-200'
-                }`}
+                interactive
               >
-                <DollarSign className={`w-10 h-10 mb-3 ${caixaAberto ? 'text-emerald-600' : 'text-amber-600'}`} />
-                <h2 className="text-xl font-bold text-gray-900">Controle de Caixa</h2>
-                <p className="text-sm text-gray-600 mt-2">
-                  {caixaAberto ? '✅ Caixa aberto' : 'Abrir/fechar caixa e gerar prestações'}
-                </p>
-              </button>
-            </div>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: DESIGN.spacing.sm }}>
+                  <DollarSign className="w-10 h-10" style={{ color: caixaAberto ? DESIGN.colors.success[600] : DESIGN.colors.warning[600] }} />
+                  <h2 className="text-xl font-bold text-gray-900">Controle de Caixa</h2>
+                  <p className="text-sm text-gray-600 mt-2">
+                    {caixaAberto ? '✅ Caixa aberto' : 'Abrir/fechar caixa e gerar prestações'}
+                  </p>
+                </div>
+              </Card>
+            </CardGrid>
           </div>
         </div>
       );
@@ -2061,7 +2228,7 @@ ${'='.repeat(50)}
                 <Select
                   value={formOperador.nivelAcesso}
                   onChange={(e) => setFormOperador({ ...formOperador, nivelAcesso: e.target.value })}
-                  options={niveisAcessoDisponiveis.map((nivel) => ({ value: nivel, label: nivel }))}
+                  options={niveisAcessoOptions}
                 />
               </div>
             </div>
@@ -2086,61 +2253,27 @@ ${'='.repeat(50)}
               <h3 className="font-bold text-gray-800">Operadores cadastrados</h3>
 
               {carregandoOperadores ? (
-                <p className="text-sm text-gray-600">Carregando operadores...</p>
-              ) : operadoresAdmin.length === 0 ? (
-                <p className="text-sm text-gray-600">Nenhum operador ativo encontrado.</p>
+                <Alert type="info" title="Carregando...">
+                  Atualizando listagem de operadores...
+                </Alert>
               ) : (
-                operadoresAdmin.map((operador) => {
-                  const nivelOperador = String(operador?.nivelAcesso || '').toUpperCase();
-                  const nivelAutenticado = String(usuarioAutenticado?.nivelAcesso || '').toUpperCase();
-                  const ehMaster = nivelOperador === 'MASTER';
-                  const ehVoceMesmo = usuarioAutenticado?.id === operador?.id;
-                  const podeDeleter = !ehMaster || (nivelAutenticado === 'MASTER' && !ehVoceMesmo);
-                  
-                  return (
-                    <div
-                      key={operador.id}
-                      className={`border rounded-lg p-3 flex items-center justify-between ${
-                        ehMaster 
-                          ? 'bg-purple-50 border-purple-300' 
-                          : 'bg-gray-50 border-gray-200'
-                      }`}
-                    >
-                      <div>
-                        <p className="font-semibold text-gray-900">
-                          {operador.nomeCompleto}
-                          {ehMaster && <span className="ml-2 text-purple-700 font-bold text-xs bg-purple-100 px-2 py-1 rounded">MASTER</span>}
-                          {ehVoceMesmo && <span className="ml-2 text-blue-700 font-bold text-xs bg-blue-100 px-2 py-1 rounded">VOCÊ</span>}
-                        </p>
-                        <p className="text-sm text-gray-600">{operador.email || 'sem email'} • {operador.nivelAcesso}</p>
-                      </div>
-
-                      <button
-                        onClick={() => setConfirmDialog({
-                          titulo: 'Remover operador',
-                          mensagem: `Confirma remover o operador ${operador.nomeCompleto}?`,
-                          onConfirm: () => removerOperadorAdmin(operador)
-                        })}
-                        disabled={!podeDeleter}
-                        className={`${
-                          podeDeleter
-                            ? 'bg-red-600 hover:bg-red-700 text-white'
-                            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                        } px-3 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 transition-all`}
-                        title={
-                          !podeDeleter
-                            ? ehVoceMesmo
-                              ? 'Você não pode se deletar'
-                              : 'Apenas MASTER pode deletar MASTER'
-                            : 'Deletar operador'
-                        }
-                      >
-                        <Trash2 className="w-4 h-4" />
-                        Deletar
-                      </button>
+                <Table
+                  columns={[
+                    { key: 'nomeCompleto', label: 'Nome', width: '200px' },
+                    { key: 'email', label: 'E-mail', width: '200px' },
+                    { key: 'nivelAcesso', label: 'Nível de Acesso', width: '140px' },
+                    { key: 'status', label: 'Status', width: '120px', align: 'center' },
+                    { key: 'acao', label: 'Ação', width: '100px', align: 'center' }
+                  ]}
+                  data={operadoresAdminTableData}
+                  striped
+                  hover
+                  emptyState={
+                    <div style={{ textAlign: 'center', padding: `${DESIGN.spacing.lg}px` }}>
+                      <p style={{ color: DESIGN.colors.neutral[500] }}>Nenhum operador ativo encontrado.</p>
                     </div>
-                  );
-                })
+                  }
+                />
               )}
             </div>
             </div>
@@ -2269,41 +2402,27 @@ ${'='.repeat(50)}
               <h3 className="font-bold text-gray-800">Pátios cadastrados</h3>
 
               {carregandoPatios ? (
-                <p className="text-sm text-gray-600">Carregando pátios...</p>
-              ) : patiosAdmin.length === 0 ? (
-                <p className="text-sm text-gray-600">Nenhum pátio encontrado. Crie um novo pátio acima.</p>
+                <Alert type="info" title="Carregando...">
+                  Atualizando listagem de pátios...
+                </Alert>
               ) : (
-                patiosAdmin.map((patio) => (
-                  <div
-                    key={patio.id}
-                    className="bg-green-50 border border-green-200 rounded-lg p-3 flex items-center justify-between"
-                  >
-                    <div className="flex-1">
-                      <p className="font-semibold text-gray-900">{patio.nome}</p>
-                      <p className="text-sm text-gray-600">
-                        {patio.endereco && `${patio.endereco} • `}
-                        {patio.cidade && `${patio.cidade}, `}
-                        {patio.estado}
-                      </p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        {patio.qtd_vagas > 0 && `${patio.qtd_vagas} vagas`}
-                        {patio.telefone && ` • ${patio.telefone}`}
-                      </p>
+                <Table
+                  columns={[
+                    { key: 'nome', label: 'Nome do Pátio', width: '200px' },
+                    { key: 'localizacao', label: 'Localização', width: '250px' },
+                    { key: 'vagas', label: 'Vagas', width: '80px', align: 'center' },
+                    { key: 'telefone', label: 'Telefone', width: '140px' },
+                    { key: 'acao', label: 'Ação', width: '100px', align: 'center' }
+                  ]}
+                  data={patiosAdminTableData}
+                  striped
+                  hover
+                  emptyState={
+                    <div style={{ textAlign: 'center', padding: `${DESIGN.spacing.lg}px` }}>
+                      <p style={{ color: DESIGN.colors.neutral[500] }}>Nenhum pátio encontrado. Crie um novo pátio acima.</p>
                     </div>
-
-                    <button
-                      onClick={() => setConfirmDialog({
-                        titulo: 'Remover pátio',
-                        mensagem: `Confirma remover o pátio "${patio.nome}"?`,
-                        onConfirm: () => removerPatioAdmin(patio)
-                      })}
-                      className="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg text-sm font-semibold flex items-center gap-2"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                      Deletar
-                    </button>
-                  </div>
-                ))
+                  }
+                />
               )}
             </div>
           </div>
@@ -3346,7 +3465,7 @@ ${'='.repeat(50)}
                     Deletar Dia
                   </Button>
                 </div>
-                <p className="text-sm text-gray-600 mt-2">Datas disponíveis: {obterDatasUnicas().length > 0 ? obterDatasUnicas().join(', ') : 'Nenhuma'}</p>
+                <p className="text-sm text-gray-600 mt-2">Datas disponíveis: {datasUnicasHistorico.length > 0 ? datasUnicasHistorico.join(', ') : 'Nenhuma'}</p>
               </div>
 
               {/* Deletar por Mês */}
@@ -3356,10 +3475,7 @@ ${'='.repeat(50)}
                   <Select
                     id="mesDeletar"
                     style={{ flex: 1 }}
-                    options={[
-                      { value: '', label: 'Selecione um mês...' },
-                      ...obterMesesUnicos().map((mesAno) => ({ value: mesAno, label: mesAno }))
-                    ]}
+                    options={opcoesMesesDelecao}
                   />
                   <Button
                     variant="danger"
@@ -3520,7 +3636,7 @@ ${'='.repeat(50)}
               </p>
 
               <div className="bg-white p-4 rounded-lg">
-                <AbaSolicitacoesMensalistas />
+                <LazyPage component={AbaSolicitacoesMensalistasLazy} />
               </div>
 
               <div className="flex gap-2">
@@ -3600,7 +3716,10 @@ ${'='.repeat(50)}
   if (!usuarioAutenticado) {
     return (
       <div>
-        <PaginaLogin onLoginSuccess={(usuario) => setUsuarioAutenticado(usuario)} />
+        <LazyPage 
+          component={PaginaLoginLazy}
+          onLoginSuccess={(usuario) => setUsuarioAutenticado(usuario)}
+        />
         {renderToasts()}
       </div>
     );
@@ -3757,6 +3876,125 @@ ${'='.repeat(50)}
             </div>
           </div>
         </div>
+
+        {/* Dashboard Stats - Métricas do Dia */}
+        <CardGrid columns={4} gap="lg" style={{ marginBottom: DESIGN.spacing.lg }}>
+          <Card variant="primary" padding="lg">
+            <div style={{ textAlign: 'center' }}>
+              <p style={{ 
+                fontSize: DESIGN.typography.sizes.sm, 
+                color: DESIGN.colors.primary[600],
+                fontWeight: '600',
+                textTransform: 'uppercase',
+                marginBottom: DESIGN.spacing.sm
+              }}>
+                Entradas
+              </p>
+              <p style={{
+                fontSize: '2.5rem',
+                fontWeight: '700',
+                color: DESIGN.colors.primary[900],
+                margin: 0
+              }}>
+                {veiculos.length}
+              </p>
+              <p style={{
+                fontSize: DESIGN.typography.sizes.xs,
+                color: DESIGN.colors.primary[700],
+                marginTop: DESIGN.spacing.xs
+              }}>
+                veículos no pátio
+              </p>
+            </div>
+          </Card>
+
+          <Card variant="success" padding="lg">
+            <div style={{ textAlign: 'center' }}>
+              <p style={{ 
+                fontSize: DESIGN.typography.sizes.sm, 
+                color: DESIGN.colors.success[600],
+                fontWeight: '600',
+                textTransform: 'uppercase',
+                marginBottom: DESIGN.spacing.sm
+              }}>
+                Arrecadado
+              </p>
+              <p style={{
+                fontSize: '2.5rem',
+                fontWeight: '700',
+                color: DESIGN.colors.success[900],
+                margin: 0
+              }}>
+                R$ {totalArrecadado.toFixed(2)}
+              </p>
+              <p style={{
+                fontSize: DESIGN.typography.sizes.xs,
+                color: DESIGN.colors.success[700],
+                marginTop: DESIGN.spacing.xs
+              }}>
+                total do dia
+              </p>
+            </div>
+          </Card>
+
+          <Card variant="warning" padding="lg">
+            <div style={{ textAlign: 'center' }}>
+              <p style={{ 
+                fontSize: DESIGN.typography.sizes.sm, 
+                color: DESIGN.colors.warning[600],
+                fontWeight: '600',
+                textTransform: 'uppercase',
+                marginBottom: DESIGN.spacing.sm
+              }}>
+                Caixa Inicial
+              </p>
+              <p style={{
+                fontSize: '2.5rem',
+                fontWeight: '700',
+                color: DESIGN.colors.warning[900],
+                margin: 0
+              }}>
+                R$ {caixaInicial.toFixed(2)}
+              </p>
+              <p style={{
+                fontSize: DESIGN.typography.sizes.xs,
+                color: DESIGN.colors.warning[700],
+                marginTop: DESIGN.spacing.xs
+              }}>
+                fundo de troco
+              </p>
+            </div>
+          </Card>
+
+          <Card variant="default" padding="lg">
+            <div style={{ textAlign: 'center' }}>
+              <p style={{ 
+                fontSize: DESIGN.typography.sizes.sm, 
+                color: DESIGN.colors.neutral[600],
+                fontWeight: '600',
+                textTransform: 'uppercase',
+                marginBottom: DESIGN.spacing.sm
+              }}>
+                Total em Caixa
+              </p>
+              <p style={{
+                fontSize: '2.5rem',
+                fontWeight: '700',
+                color: DESIGN.colors.neutral[900],
+                margin: 0
+              }}>
+                R$ {totalCaixa.toFixed(2)}
+              </p>
+              <p style={{
+                fontSize: DESIGN.typography.sizes.xs,
+                color: DESIGN.colors.neutral[700],
+                marginTop: DESIGN.spacing.xs
+              }}>
+                saldo atual
+              </p>
+            </div>
+          </Card>
+        </CardGrid>
 
         {/* Abas: Patio, Saidas e Saida por Placa */}
         <div className="flex gap-3 mb-6">
@@ -4003,38 +4241,82 @@ ${'='.repeat(50)}
             <History className="w-6 h-6 text-green-600" />
             Veículos que Saíram ({historico.length})
           </h2>
-          {historico.length === 0 ? (
-            <p className="text-gray-500 text-center py-8">Nenhum registro de saída</p>
-          ) : (
-            <div className="space-y-2 max-h-96 overflow-y-auto">
-              {historico.map((reg) => {
-                const emoji = reg.tipo === 'moto' ? '🏍️' : '🚗';
-                return (
-                  <div key={reg.id} className="bg-gray-50 p-3 rounded-lg flex justify-between items-center">
-                    <div>
-                      <p className="font-bold text-lg">{emoji} {reg.placa}</p>
-                      <p className="text-sm text-gray-600">
-                        {reg.modelo} • {reg.cor}
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        Entrada: {new Date(reg.entrada).toLocaleTimeString('pt-BR')}
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        Saída: {new Date(reg.saida).toLocaleTimeString('pt-BR')}
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        Permanência: {formatarTempo(reg.permanencia)}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-2xl font-bold text-green-600">
-                        R$ {reg.valor.toFixed(2)}
-                      </p>
-                    </div>
+          {usarVirtualizacaoHistorico ? (
+            <>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '90px 1fr 100px 110px 110px 120px 110px',
+                  gap: DESIGN.spacing.sm,
+                  padding: `${DESIGN.spacing.sm}px ${DESIGN.spacing.md}px`,
+                  border: `1px solid ${DESIGN.colors.neutral[200]}`,
+                  borderBottom: 'none',
+                  borderRadius: `${DESIGN.border.radius.md} ${DESIGN.border.radius.md} 0 0`,
+                  backgroundColor: DESIGN.colors.neutral[100],
+                  fontWeight: '700',
+                  color: DESIGN.colors.neutral[800],
+                  fontSize: DESIGN.typography.sizes.sm
+                }}
+              >
+                <span>Placa</span>
+                <span>Modelo</span>
+                <span>Tipo</span>
+                <span>Entrada</span>
+                <span>Saída</span>
+                <span>Permanência</span>
+                <span style={{ textAlign: 'right' }}>Valor</span>
+              </div>
+
+              <VirtualizedList
+                items={historicoGridData}
+                itemHeight={52}
+                height={520}
+                keyExtractor={(item) => item.id}
+                renderItem={(item) => (
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: '90px 1fr 100px 110px 110px 120px 110px',
+                      gap: DESIGN.spacing.sm,
+                      width: '100%',
+                      alignItems: 'center',
+                      fontSize: DESIGN.typography.sizes.sm,
+                      color: DESIGN.colors.neutral[900]
+                    }}
+                  >
+                    <span>{item.placa}</span>
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.modelo}</span>
+                    <span>{item.tipo}</span>
+                    <span>{item.entrada}</span>
+                    <span>{item.saida}</span>
+                    <span>{item.permanencia}</span>
+                    <span style={{ textAlign: 'right', fontWeight: '600' }}>{item.valor}</span>
                   </div>
-                );
-              })}
-            </div>
+                )}
+                emptyState={
+                  <div style={{ textAlign: 'center', padding: `${DESIGN.spacing.lg}px` }}>
+                    <p style={{ color: DESIGN.colors.neutral[500] }}>Nenhum registro de saída</p>
+                  </div>
+                }
+                style={{ borderRadius: `0 0 ${DESIGN.border.radius.md} ${DESIGN.border.radius.md}` }}
+              />
+              <p style={{ marginTop: DESIGN.spacing.sm, color: DESIGN.colors.neutral[600], fontSize: DESIGN.typography.sizes.xs }}>
+                Modo otimizado ativo: virtualização para grandes volumes de histórico.
+              </p>
+            </>
+          ) : (
+            <DataGrid
+               columns={colunasHistorico}
+              data={historicoGridData}
+              sortable
+              hover
+              striped
+              emptyState={
+                <div style={{ textAlign: 'center', padding: `${DESIGN.spacing.lg}px` }}>
+                  <p style={{ color: DESIGN.colors.neutral[500] }}>Nenhum registro de saída</p>
+                </div>
+              }
+            />
           )}
         </div>
         )}
