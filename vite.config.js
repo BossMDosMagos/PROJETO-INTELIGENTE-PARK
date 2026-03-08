@@ -3,7 +3,9 @@ import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
-  base: '/PROJETO-INTELIGENTE-PARK/',
+  base: process.env.GITHUB_REPOSITORY
+    ? `/${process.env.GITHUB_REPOSITORY.split('/')[1]}/`
+    : '/PROJETO-INTELIGENTE-PARK/',
   plugins: [
     react(),
     VitePWA({
@@ -20,25 +22,25 @@ export default defineConfig({
         start_url: './',
         icons: [
           {
-            src: '/PROJETO-INTELIGENTE-PARK/img/LogoInteligentePark.jpeg',
+            src: 'img/LogoInteligentePark.jpeg',
             sizes: '192x192',
             type: 'image/jpeg',
             purpose: 'any'
           },
           {
-            src: '/PROJETO-INTELIGENTE-PARK/img/LogoInteligentePark.jpeg',
+            src: 'img/LogoInteligentePark.jpeg',
             sizes: '512x512',
             type: 'image/jpeg',
             purpose: 'any'
           },
           {
-            src: '/PROJETO-INTELIGENTE-PARK/img/LogoInteligentePark.jpeg',
+            src: 'img/LogoInteligentePark.jpeg',
             sizes: '192x192',
             type: 'image/jpeg',
             purpose: 'maskable'
           },
           {
-            src: '/PROJETO-INTELIGENTE-PARK/img/LogoInteligentePark.jpeg',
+            src: 'img/LogoInteligentePark.jpeg',
             sizes: '512x512',
             type: 'image/jpeg',
             purpose: 'maskable'

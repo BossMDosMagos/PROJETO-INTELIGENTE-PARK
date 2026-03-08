@@ -31,6 +31,8 @@ export function Card({
   onClick,
   interactive = false,
   className = '',
+  gradient = '',
+  glass = false,
   ...otherProps
 }) {
   const variantStyles = {
@@ -78,26 +80,48 @@ export function Card({
   const interactiveStyle = interactive || onClick ? {
     cursor: 'pointer',
     transition: `all ${DESIGN.transition.base}`,
-    transform: 'scale(1)',
-    ':hover': {
-      transform: 'scale(1.02)',
-      boxShadow: `0 10px 15px -3px rgba(0, 0, 0, 0.1)`
-    }
+    transform: 'scale(1)'
   } : {};
+
+  const gradientBg = gradient && DESIGN.gradients[gradient] ? DESIGN.gradients[gradient] : null;
+  const isColored = Boolean(gradientBg);
+  const textColor = isColored ? 'white' : variantStyle.text;
+  const baseBackground = glass
+    ? DESIGN.glass.background
+    : (gradientBg || variantStyle.bg);
+  const baseBorder = glass
+    ? DESIGN.glass.border
+    : variantStyle.border;
+  const baseShadow = glass ? DESIGN.glass.shadow : shadowStyle.boxShadow;
+  const baseBackdrop = glass ? DESIGN.glass.blur : undefined;
 
   return (
     <div
       onClick={onClick}
       style={{
-        backgroundColor: variantStyle.bg,
-        border: variantStyle.border,
+        background: baseBackground,
+        backgroundImage: gradientBg || undefined,
+        border: baseBorder,
         borderRadius: DESIGN.border.radius.lg,
         padding: `${cardPadding}px`,
-        color: variantStyle.text,
-        ...shadowStyle,
+        color: textColor,
+        boxShadow: baseShadow,
+        backdropFilter: baseBackdrop,
         ...interactiveStyle
       }}
       className={className}
+      onMouseEnter={(e) => {
+        if (interactive || onClick) {
+          e.currentTarget.style.transform = 'scale(1.02)';
+          e.currentTarget.style.boxShadow = DESIGN.shadow.md;
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (interactive || onClick) {
+          e.currentTarget.style.transform = 'scale(1)';
+          e.currentTarget.style.boxShadow = baseShadow;
+        }
+      }}
       {...otherProps}
     >
       {title && (
@@ -116,7 +140,7 @@ export function Card({
             <p
               style={{
                 fontSize: DESIGN.typography.sizes.sm,
-                color: DESIGN.colors.neutral[600],
+                color: isColored ? 'rgba(255,255,255,0.85)' : DESIGN.colors.neutral[600],
                 margin: 0
               }}
             >

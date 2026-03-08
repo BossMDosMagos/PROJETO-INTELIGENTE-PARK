@@ -234,6 +234,19 @@ export const DESIGN = {
     base: 'all 250ms cubic-bezier(0.4, 0, 0.2, 1)',
     slow: 'all 350ms cubic-bezier(0.4, 0, 0.2, 1)'
   },
+  gradients: {
+    primary: 'linear-gradient(135deg, #60a5fa 0%, #2563eb 50%, #1e40af 100%)',
+    success: 'linear-gradient(135deg, #86efac 0%, #22c55e 50%, #15803d 100%)',
+    warning: 'linear-gradient(135deg, #fdba74 0%, #f97316 50%, #c2410c 100%)',
+    danger: 'linear-gradient(135deg, #fca5a5 0%, #ef4444 50%, #b91c1c 100%)',
+    neutral: 'linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 50%, #d1d5db 100%)'
+  },
+  glass: {
+    background: 'rgba(255,255,255,0.85)',
+    blur: 'blur(10px)',
+    border: '1px solid rgba(255,255,255,0.35)',
+    shadow: '0 10px 30px rgba(16,24,40,0.08)'
+  },
 
   // ========================================
   // BREAKPOINTS (Mobile-first)

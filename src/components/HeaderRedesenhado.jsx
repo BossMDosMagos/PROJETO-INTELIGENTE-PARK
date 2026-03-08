@@ -53,11 +53,14 @@ export function HeaderRedesenhado({
 
   return (
     <header 
-      className="bg-white border-b transition-all"
+      className="transition-all"
       style={{
         borderColor: DESIGN.colors.neutral[200],
-        boxShadow: DESIGN.shadow.xs,
-        padding: `${DESIGN.spacing.md} ${DESIGN.spacing.lg}`
+        boxShadow: DESIGN.glass.shadow,
+        padding: `${DESIGN.spacing.md} ${DESIGN.spacing.lg}`,
+        background: DESIGN.glass.background,
+        backdropFilter: DESIGN.glass.blur,
+        borderBottom: DESIGN.glass.border
       }}
     >
       <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
@@ -66,7 +69,7 @@ export function HeaderRedesenhado({
           {/* Logo Circle */}
           <div
             className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 text-white font-bold text-lg"
-            style={{ backgroundColor: DESIGN.colors.primary[400] }}
+            style={{ backgroundImage: DESIGN.gradients.primary }}
           >
             P
           </div>
@@ -98,8 +101,9 @@ export function HeaderRedesenhado({
             <div
               className="flex items-center gap-2 px-3 py-2 rounded-lg"
               style={{ 
-                backgroundColor: DESIGN.colors.neutral[100],
-                transition: DESIGN.transition.fast
+                background: DESIGN.glass.background,
+                backdropFilter: DESIGN.glass.blur,
+                border: DESIGN.glass.border
               }}
             >
               <div
@@ -165,17 +169,18 @@ export function HeaderRedesenhado({
             {/* Logout */}
             <button
               onClick={onLogout}
-              className="p-2 rounded-lg hover:bg-red-50 transition-colors"
+              className="p-2 rounded-lg transition-colors"
               style={{
                 minWidth: DESIGN.size.touch,
                 minHeight: DESIGN.size.touch,
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center'
+                justifyContent: 'center',
+                backgroundImage: DESIGN.gradients.danger
               }}
               title="Sair da conta"
             >
-              <LogOut size={20} color={DESIGN.colors.danger[500]} />
+              <LogOut size={18} color="white" />
             </button>
           </div>
         )}

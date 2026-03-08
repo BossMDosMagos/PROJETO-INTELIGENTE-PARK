@@ -16,7 +16,8 @@ import {
   prefetchPages
 } from './pages/index.jsx';
 import DESIGN from './design-system';
-import HeaderRedesenhado from './components/HeaderRedesenhado';
+import TopBarLegacy from './components/TopBarLegacy.jsx';
+import Sidebar from './components/Sidebar';
 import { Button } from './components/Button';
 import { StatusSincronizacao } from './components/StatusSincronizacao';
 import { Input, TextArea, Select } from './components/Input';
@@ -1805,6 +1806,20 @@ ${'='.repeat(50)}
     [historico]
   );
 
+  const totalArrecadadoDia = useMemo(() => {
+    const dataAtualISO = new Date().toISOString().split('T')[0];
+    const registrosDoDia = historico.filter((reg) => {
+      const dataSaida = new Date(reg.saida).toISOString().split('T')[0];
+      return dataSaida === dataAtualISO;
+    });
+    return registrosDoDia.reduce((soma, reg) => soma + (reg.valor || 0), 0);
+  }, [historico]);
+
+  const caixaInicialAtual = useMemo(() => Number(config?.valorCaixaInicial || 0), [config]);
+  const totalCaixaAtual = useMemo(
+    () => caixaInicialAtual + totalArrecadadoDia,
+    [caixaInicialAtual, totalArrecadadoDia]
+  );
   const historicoGridData = useMemo(() => (
     historico.map((reg) => ({
       id: reg.id,
@@ -3727,8 +3742,17 @@ ${'='.repeat(50)}
 
   // TELA HOME (OPERACIONAL)
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 p-4 pb-20">
-      <div className="max-w-4xl mx-auto">
+    <div className="min-h-screen bg-slate-100 pb-20">
+      <div style={{ position: 'fixed', left: 0, top: 0, bottom: 0, width: '16rem', zIndex: 5 }}>
+        <Sidebar selected="principal" onNavigate={(item) => {
+          if (item === 'operador') { setTela('admin'); setSecaoAdmin('operadores'); }
+          if (item === 'caixa') { setShowModalControleCaixa(true); }
+          if (item === 'entrada') { setAbaHome('patio'); }
+          if (item === 'saida') { setAbaHome('saidas'); }
+          if (item === 'logout') { supabaseService.logout(); setUsuarioAutenticado(null); }
+        }} isDesktop />
+      </div>
+      <div className="ml-0 md:ml-64 max-w-6xl mx-auto px-4">
         {/* ALERTA DE MENSALISTA ATIVO */}
         {showAlertaMensalista && (
           <div className="mb-6 bg-gradient-to-r from-emerald-400 to-green-500 border-4 border-white rounded-xl p-6 shadow-2xl animate-pulse">
@@ -3750,29 +3774,18 @@ ${'='.repeat(50)}
           </div>
         )}
 
-        {/* HEADER REDESENHADO */}
-        <HeaderRedesenhado
-          usuarioAutenticado={usuarioAutenticado}
-          pendenciasMensalistas={pendenciasMensalistas}
-          temDadosPendentes={supabaseService.temDadosPendentes?.() || false}
-          statusSincronizacao={{ sincronizado: true, offline: false, RLSDisabled: false }}
-          saldoCaixa={totalEmCaixa}
-          mostrarCaixa={mostrarTotalCaixa}
-          onToggleCaixa={(valor) => setMostrarTotalCaixa(valor)}
-          onNotificacoes={() => {
-            if (usuarioAutenticado) {
-              setTela('admin');
-              setSecaoAdmin('mensalistas');
-            } else {
-              setTela('login-admin');
-            }
+        <TopBarLegacy
+          tempoAtual={tempoAtual}
+          usuario={usuarioAutenticado}
+          onNavigate={(item) => {
+            if (item === 'patio') setAbaHome('patio');
+            if (item === 'saidas') setAbaHome('saidas');
+            if (item === 'caixa') setShowModalControleCaixa(true);
           }}
           onLogout={() => {
             supabaseService.logout();
             setUsuarioAutenticado(null);
           }}
-          onMenuToggle={() => setTela('login-admin')}
-          isMobile={isMobile}
         />
 
         {/* Controles Adicionais - Caixa + Impressoras */}
@@ -3877,6 +3890,45 @@ ${'='.repeat(50)}
           </div>
         </div>
 
+        {/* Ações rápidas estilo index2 */}
+        <section className="p-2 grid grid-cols-2 md:grid-cols-4 gap-3">
+          <button
+            className="flex flex-col items-center justify-center p-4 bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:border-blue-400 transition group"
+            onClick={() => setAbaHome('patio')}
+            title="Pátio"
+          >
+            <Car className="text-blue-600 mb-2 group-hover:scale-110 transition" />
+            <span className="text-xs font-bold uppercase">Pátio ({veiculos.length})</span>
+          </button>
+          <button
+            className="flex flex-col items-center justify-center p-4 bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:border-green-400 transition group"
+            onClick={() => setAbaHome('saidas')}
+            title="Saídas"
+          >
+            <CheckCircle className="text-green-600 mb-2 group-hover:scale-110 transition" />
+            <span className="text-xs font-bold uppercase">Saídas ({historico.length})</span>
+          </button>
+          <button
+            className="flex flex-col items-center justify-center p-4 bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:border-orange-400 transition group"
+            onClick={() => setShowModalControleCaixa(true)}
+            title="Caixa"
+          >
+            <DollarSign className="text-orange-500 mb-2 group-hover:scale-110 transition" />
+            <span className="text-xs font-bold uppercase">Caixa</span>
+          </button>
+          <button
+            className="flex flex-col items-center justify-center p-4 bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:border-purple-400 transition group"
+            onClick={() => {
+              setTela('admin');
+              setSecaoAdmin('mensalistas');
+            }}
+            title="Mensalistas"
+          >
+            <Users className="text-purple-600 mb-2 group-hover:scale-110 transition" />
+            <span className="text-xs font-bold uppercase">Mensalistas</span>
+          </button>
+        </section>
+
         {/* Dashboard Stats - Métricas do Dia */}
         <CardGrid columns={4} gap="lg" style={{ marginBottom: DESIGN.spacing.lg }}>
           <Card variant="primary" padding="lg">
@@ -3925,7 +3977,7 @@ ${'='.repeat(50)}
                 color: DESIGN.colors.success[900],
                 margin: 0
               }}>
-                R$ {totalArrecadado.toFixed(2)}
+                R$ {totalArrecadadoDia.toFixed(2)}
               </p>
               <p style={{
                 fontSize: DESIGN.typography.sizes.xs,
@@ -3954,7 +4006,7 @@ ${'='.repeat(50)}
                 color: DESIGN.colors.warning[900],
                 margin: 0
               }}>
-                R$ {caixaInicial.toFixed(2)}
+                R$ {caixaInicialAtual.toFixed(2)}
               </p>
               <p style={{
                 fontSize: DESIGN.typography.sizes.xs,
@@ -3983,7 +4035,7 @@ ${'='.repeat(50)}
                 color: DESIGN.colors.neutral[900],
                 margin: 0
               }}>
-                R$ {totalCaixa.toFixed(2)}
+                R$ {totalCaixaAtual.toFixed(2)}
               </p>
               <p style={{
                 fontSize: DESIGN.typography.sizes.xs,
@@ -4031,7 +4083,7 @@ ${'='.repeat(50)}
         </div>
 
         {/* Entrada de Veículo */}
-        <div className="card mb-6">
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-6">
           <h2 className="text-xl font-bold mb-4">Registrar Entrada</h2>
           
           {/* Campo de Placa com Autocompletar */}
@@ -4116,20 +4168,18 @@ ${'='.repeat(50)}
             </button>
           </div>
           
-          <Button 
-            variant="primary" 
-            fullWidth
-            size="lg"
+          <button
             onClick={registrarEntrada}
-            style={{ marginTop: DESIGN.spacing.md, fontSize: '1.125rem' }}
+            className="w-full p-5 bg-blue-600 hover:bg-blue-700 text-white font-black text-lg rounded-xl shadow-lg shadow-blue-200 transition-all active:scale-95 uppercase"
+            style={{ marginTop: DESIGN.spacing.md }}
           >
-            REGISTRAR ENTRADA
-          </Button>
+            Registrar Entrada
+          </button>
         </div>
 
         {/* Veículos no Pátio */}
         {abaHome === 'patio' && (
-        <div className="card">
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4">
           <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
             <Car className="w-6 h-6" />
             Veículos no Pátio ({veiculos.length})
