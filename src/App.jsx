@@ -32,6 +32,7 @@ import { supabaseService } from './services/supabaseService';
 import ProLayout from './pro/ProLayout.jsx';
 import MasterDashboard from './pro/MasterDashboard.jsx';
 import OperatorDashboard from './pro/OperatorDashboard.jsx';
+import CaixaPro from './pro/CaixaPro.jsx';
 import { 
   Car, 
   Clock, 
@@ -176,6 +177,24 @@ function App() {
     email: '',
     descricao: ''
   });
+
+  // Estados para Unidades do Mapa (Supabase)
+  const [unidades, setUnidades] = useState([]);
+  
+  useEffect(() => {
+    const fetchUnidades = async () => {
+      if (supabaseService.client) {
+        try {
+          const { data, error } = await supabaseService.client.from('unidades').select('*');
+          if (data) setUnidades(data);
+        } catch (err) {
+          console.error('Erro ao buscar unidades:', err);
+        }
+      }
+    };
+    // Tenta buscar ao carregar e quando autenticar
+    fetchUnidades();
+  }, [usuarioAutenticado]);
 
   // Estados para navegação do Admin
   const [secaoAdmin, setSecaoAdmin] = useState(null); // null = menu, ou nome da seção
@@ -3776,7 +3795,7 @@ ${'='.repeat(50)}
         <ProLayout>
           {String(usuarioAutenticado?.nivelAcesso || '').toUpperCase() === 'MASTER' ? (
             <MasterDashboard
-              unidades={[]}
+              unidades={unidades}
               ocupacao={{}}
               bi={{
                 faturamento: historico.reduce((sum, r) => sum + (Number(r.valor) || 0), 0),
@@ -3786,7 +3805,29 @@ ${'='.repeat(50)}
             />
           ) : (
             <OperatorDashboard>
-              {/* Reuso do formulário de Registrar Entrada já existente abaixo */}
+              <div className="mb-8">
+                <CaixaPro 
+                  isOpen={caixaAberto}
+                  balance={totalCaixaAtual}
+                  onOpen={(valor) => {
+                    setConfig({ ...config, valorCaixaInicial: valor });
+                    setCaixaAberto(true);
+                    setDataAberturaCaixa(new Date().toISOString());
+                    setDataFechamentoCaixa(null);
+                    showToast(`✅ Caixa aberto: R$ ${valor.toFixed(2)}`, 'success');
+                  }}
+                  onClose={fecharCaixa}
+                  onBleed={(valor, motivo) => {
+                    showToast(`Sangria de R$ ${valor} registrada: ${motivo}`, 'info');
+                  }}
+                  history={historico.slice(0, 10).map(h => ({
+                    description: `${h.placa} - ${h.modelo}`,
+                    amount: h.valor,
+                    date: h.saida,
+                    type: 'in'
+                  }))}
+                />
+              </div>
             </OperatorDashboard>
           )}
         </ProLayout>
