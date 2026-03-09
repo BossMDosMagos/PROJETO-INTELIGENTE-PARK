@@ -10,7 +10,7 @@ export function PaginaCadastroMensalista() {
   const [sucesso, setSucesso] = useState(false);
   const [mensalistaEnviado, setMensalistaEnviado] = useState(null);
   const [config, setConfig] = useState({
-    nomeEmpresa: 'Inteligente Park',
+    nomeEmpresa: 'Command Park',
     logoUrl: null
   });
 
@@ -182,7 +182,7 @@ export function PaginaCadastroMensalista() {
             </div>
           </div>
           <h1 className="text-3xl font-bold mb-2 text-white tracking-tight">
-            {config.nomeEmpresa || 'Inteligente Park'}
+            {config.nomeEmpresa || 'Command Park'}
           </h1>
           <p className="text-slate-400 text-lg">Cadastro de Mensalista</p>
         </div>

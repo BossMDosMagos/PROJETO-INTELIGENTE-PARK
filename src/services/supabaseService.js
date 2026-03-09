@@ -1400,6 +1400,63 @@ class SupabaseService {
   }
 
   /**
+   * Obter configurações globais da empresa
+   * @returns {Promise<Object>} { sucesso, dados, erro }
+   */
+  async obterConfiguracoes() {
+    if (!this.initialized) {
+      return { sucesso: false, erro: 'Supabase não inicializado' };
+    }
+
+    try {
+      const { data, error } = await this.client
+        .from('configuracoes')
+        .select('*')
+        .eq('id', 1)
+        .single();
+
+      if (error && error.code !== 'PGRST116') { // PGRST116 = not found
+        throw error;
+      }
+
+      return { sucesso: true, dados: data || {} };
+    } catch (erro) {
+      console.error('❌ Erro ao obter configurações:', erro);
+      return { sucesso: false, erro: erro.message };
+    }
+  }
+
+  /**
+   * Salvar/Atualizar configurações globais da empresa
+   * @param {Object} dados - Dados da empresa (nome, cnpj, logo, etc)
+   * @returns {Promise<Object>} { sucesso, erro }
+   */
+  async salvarConfiguracoes(dados) {
+    if (!this.initialized) {
+      return { sucesso: false, erro: 'Supabase não inicializado' };
+    }
+
+    try {
+      // Garantir que ID seja 1
+      const configData = { ...dados, id: 1, updated_at: new Date().toISOString() };
+      
+      const { error } = await this.client
+        .from('configuracoes')
+        .upsert(configData)
+        .select();
+
+      if (error) {
+        throw error;
+      }
+
+      return { sucesso: true };
+    } catch (erro) {
+      console.error('❌ Erro ao salvar configurações:', erro);
+      return { sucesso: false, erro: erro.message };
+    }
+  }
+
+  /**
    * Obter status de conectividade
    */
   obterStatus() {

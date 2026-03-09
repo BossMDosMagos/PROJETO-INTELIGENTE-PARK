@@ -103,7 +103,7 @@ const AdminCard = ({ icon: Icon, title, desc, color, onClick, badge }) => (
 
 // Configurações padrão
 const CONFIG_PADRAO = {
-  nomeEmpresa: 'Inteligente Park',
+  nomeEmpresa: 'Command Park',
   cnpj: '',
   endereco: '',
   telefone: '',
@@ -267,6 +267,34 @@ function App() {
   const [showRelatorioFechamento, setShowRelatorioFechamento] = useState(false);
   const [valorCaixaAbreConfig, setValorCaixaAbreConfig] = useState('');
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  // Carregar configurações globais do Supabase ao iniciar
+  useEffect(() => {
+    const carregarConfiguracoes = async () => {
+      // Pequeno delay para garantir que supabaseService inicializou
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      if (supabaseService.isOnline) {
+        const { sucesso, dados } = await supabaseService.obterConfiguracoes();
+        if (sucesso && dados) {
+          console.log('Configurações carregadas do Supabase:', dados);
+          setConfig(prev => ({
+            ...prev,
+            nomeEmpresa: dados.nome_empresa || prev.nomeEmpresa,
+            cnpj: dados.cnpj || prev.cnpj,
+            endereco: dados.endereco || prev.endereco,
+            telefone: dados.telefone || prev.telefone,
+            logoUrl: dados.logo_url || prev.logoUrl,
+            valorHora: Number(dados.valor_hora) || prev.valorHora,
+            toleranciaMinutos: Number(dados.tolerancia_minutos) || prev.toleranciaMinutos,
+            valorCaixaInicial: Number(dados.valor_caixa_inicial) || prev.valorCaixaInicial
+          }));
+        }
+      }
+    };
+    
+    carregarConfiguracoes();
+  }, []);
 
   const showToast = (mensagem, tipo = 'info', duracao = 3500) => {
     const id = Date.now() + Math.random();
@@ -2553,6 +2581,18 @@ ${'='.repeat(50)}
               formatarCNPJ={formatarCNPJ}
               handleLogoUpload={handleLogoUpload}
               removerLogo={removerLogo}
+              salvarConfiguracoes={async () => {
+                if (supabaseService.isOnline) {
+                  const { sucesso, erro } = await supabaseService.salvarConfiguracoes(config);
+                  if (sucesso) {
+                    showToast('Configurações salvas na nuvem!', 'success');
+                  } else {
+                    showToast('Erro ao salvar na nuvem: ' + erro, 'error');
+                  }
+                } else {
+                  showToast('Offline: Configurações salvas apenas localmente.', 'warning');
+                }
+              }}
             />
           )}
 

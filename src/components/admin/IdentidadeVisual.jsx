@@ -1,5 +1,5 @@
 import React from 'react';
-import { Car } from 'lucide-react';
+import { Car, Save } from 'lucide-react';
 import { Input } from '../Input';
 
 const IdentidadeVisual = ({
@@ -7,18 +7,30 @@ const IdentidadeVisual = ({
   setConfig,
   formatarCNPJ,
   handleLogoUpload,
-  removerLogo
+  removerLogo,
+  salvarConfiguracoes
 }) => {
   return (
     <div className="mb-6">
-      <div className="flex items-center gap-4 mb-8">
-        <div className="w-16 h-16 rounded-xl bg-indigo-500/20 flex items-center justify-center border border-indigo-500/30">
-          <Car className="w-8 h-8 text-indigo-400" />
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center gap-4">
+          <div className="w-16 h-16 rounded-xl bg-indigo-500/20 flex items-center justify-center border border-indigo-500/30">
+            <Car className="w-8 h-8 text-indigo-400" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold text-white">Identidade da Marca</h2>
+            <p className="text-slate-400">Defina como sua empresa aparece nos tickets e telas.</p>
+          </div>
         </div>
-        <div>
-          <h2 className="text-2xl font-bold text-white">Identidade da Marca</h2>
-          <p className="text-slate-400">Defina como sua empresa aparece nos tickets e telas.</p>
-        </div>
+        {salvarConfiguracoes && (
+          <button
+            onClick={salvarConfiguracoes}
+            className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-6 rounded-xl flex items-center gap-2 transition-all shadow-lg shadow-emerald-900/20 active:scale-95"
+          >
+            <Save className="w-5 h-5" />
+            Salvar Alterações
+          </button>
+        )}
       </div>
 
       <div className="space-y-6 bg-[#0F172A]/50 p-8 rounded-xl border border-slate-800">
