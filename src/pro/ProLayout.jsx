@@ -200,20 +200,15 @@ export default function ProLayout({ children, onAdmin, onLogout, unidades = [] }
             </div>
             <div style={{ flex: 1, position: 'relative' }}>
                <MapContainer
-                  center={[-14.235, -51.9253]}
-                  zoom={4}
+                  center={unidades.length > 0 ? [unidades[0].lat, unidades[0].lng] : [-23.550520, -46.633308]}
+                  zoom={unidades.length > 0 ? 15 : 12}
                   style={{ width: '100%', height: '100%' }}
                 >
                   <TileLayer
                     attribution='&copy; OpenStreetMap'
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                   />
-                  {(unidades.length ? unidades : [
-                    { id: 1, nome: 'Unidade SP', lat: -23.55, lng: -46.63, ocupacao: 42, faturamento: 1200.5 },
-                    { id: 2, nome: 'Unidade RJ', lat: -22.90, lng: -43.20, ocupacao: 78, faturamento: 980.2 },
-                    { id: 3, nome: 'Unidade MG', lat: -19.91, lng: -43.93, ocupacao: 25, faturamento: 540.0 },
-                    { id: 4, nome: 'Unidade RS', lat: -30.03, lng: -51.22, ocupacao: 95, faturamento: 2100.0 }
-                  ]).map(u => (
+                  {unidades.map(u => (
                     <CircleMarker
                       key={u.id}
                       center={[u.lat, u.lng]}

@@ -79,18 +79,15 @@ export default function MasterDashboard({ unidades = [], ocupacao = {}, bi = {} 
           }}
         >
           <MapContainer
-            center={[-14.235, -51.9253]}
-            zoom={4}
+            center={unidades.length > 0 ? [unidades[0].lat, unidades[0].lng] : [-23.550520, -46.633308]}
+            zoom={unidades.length > 0 ? 15 : 12}
             style={{ width: '100%', height: '100%' }}
           >
             <TileLayer
               attribution='&copy; OpenStreetMap'
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
-            {(unidades.length ? unidades : [
-              { id: 1, nome: 'Unidade SP', lat: -23.55, lng: -46.63, ocupacao: 42, faturamento: 1200.5 },
-              { id: 2, nome: 'Unidade RJ', lat: -22.90, lng: -43.20, ocupacao: 78, faturamento: 980.2 }
-            ]).map(u => (
+            {unidades.map(u => (
               <CircleMarker
                 key={u.id}
                 center={[u.lat, u.lng]}

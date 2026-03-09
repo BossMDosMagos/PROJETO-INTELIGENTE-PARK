@@ -178,23 +178,18 @@ function App() {
     descricao: ''
   });
 
-  // Estados para Unidades do Mapa (Supabase)
-  const [unidades, setUnidades] = useState([]);
-  
-  useEffect(() => {
-    const fetchUnidades = async () => {
-      if (supabaseService.client) {
-        try {
-          const { data, error } = await supabaseService.client.from('unidades').select('*');
-          if (data) setUnidades(data);
-        } catch (err) {
-          console.error('Erro ao buscar unidades:', err);
-        }
-      }
-    };
-    // Tenta buscar ao carregar e quando autenticar
-    fetchUnidades();
-  }, [usuarioAutenticado]);
+  // Mapa de unidades baseado nos pátios cadastrados
+  const unidadesMapa = useMemo(() => {
+    return patiosAdmin.map(patio => ({
+      id: patio.id,
+      nome: patio.nome,
+      lat: -23.55, // Placeholder - ideal seria ter lat/lng no cadastro de pátio
+      lng: -46.63, // Placeholder
+      ocupacao: Math.round((veiculos.length / (patio.qtd_vagas || 100)) * 100),
+      faturamento: totalArrecadadoDia
+    }));
+  }, [patiosAdmin, veiculos, totalArrecadadoDia]);
+
 
   // Estados para navegação do Admin
   const [secaoAdmin, setSecaoAdmin] = useState(null); // null = menu, ou nome da seção
@@ -3793,7 +3788,14 @@ ${'='.repeat(50)}
       </div>
       <div className="ml-0 md:ml-64 max-w-6xl mx-auto px-4">
         <ProLayout
-          unidades={unidades}
+          unidades={unidadesMapa.length > 0 ? unidadesMapa : [{
+            id: 'default',
+            nome: config.nomeEmpresa || 'Pátio Principal',
+            lat: -23.550520,
+            lng: -46.633308,
+            ocupacao: Math.min(100, Math.round((veiculos.length / 100) * 100)),
+            faturamento: totalArrecadadoDia
+          }]}
           onAdmin={() => setTela('admin')}
           onLogout={() => {
             supabaseService.logout();
@@ -3802,7 +3804,14 @@ ${'='.repeat(50)}
         >
           {String(usuarioAutenticado?.nivelAcesso || '').toUpperCase() === 'MASTER' ? (
             <MasterDashboard
-              unidades={unidades}
+              unidades={unidadesMapa.length > 0 ? unidadesMapa : [{
+                id: 'default',
+                nome: config.nomeEmpresa || 'Pátio Principal',
+                lat: -23.550520,
+                lng: -46.633308,
+                ocupacao: Math.min(100, Math.round((veiculos.length / 100) * 100)),
+                faturamento: totalArrecadadoDia
+              }]}
               ocupacao={{}}
               bi={{
                 faturamento: historico.reduce((sum, r) => sum + (Number(r.valor) || 0), 0),
