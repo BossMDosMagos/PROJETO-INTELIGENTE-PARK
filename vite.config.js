@@ -72,19 +72,15 @@ export default defineConfig({
     port: 3000
   },
   build: {
-    // Otimizações de build
-    minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: true,
-        drop_debugger: true
-      }
-    },
-    // Code splitting simplificado (automático)
-    chunkSizeWarningLimit: 800,
+    // Otimizações de build - Minificação desativada para debug de erro de inicialização
+    minify: false,
+    target: 'esnext',
     
-    // Source map apenas em development
-    sourcemap: process.env.NODE_ENV === 'development',
+    // Code splitting simplificado (automático)
+    chunkSizeWarningLimit: 1500,
+    
+    // Source map ativado para melhor debug
+    sourcemap: true,
     
     // Otimizações de CSS
     cssMinify: true
