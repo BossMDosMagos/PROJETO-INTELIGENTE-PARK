@@ -1,8 +1,9 @@
 import React from 'react';
 import DESIGN from '../design-system';
 import LanguageSwitcher from '../components/LanguageSwitcher.jsx';
+import { Settings, LogOut } from 'lucide-react';
 
-export default function ProLayout({ children }) {
+export default function ProLayout({ children, onAdmin, onLogout }) {
   return (
     <div
       style={{
@@ -56,7 +57,50 @@ export default function ProLayout({ children }) {
             <div style={{ fontSize: 12, opacity: 0.7 }}>Luxury UI • Glass • Bento</div>
           </div>
         </div>
-        <LanguageSwitcher />
+        
+        <div style={{ display: 'flex', gap: 10 }}>
+            {onAdmin && (
+              <button
+                onClick={onAdmin}
+                style={{
+                  padding: 10,
+                  borderRadius: 12,
+                  background: 'rgba(255,255,255,0.1)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  color: 'white',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+                title="Administrativo"
+              >
+                <Settings size={20} />
+              </button>
+            )}
+            
+            {onLogout && (
+              <button
+                onClick={onLogout}
+                style={{
+                  padding: 10,
+                  borderRadius: 12,
+                  background: 'rgba(239, 68, 68, 0.2)',
+                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                  color: '#fca5a5',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+                title="Sair / Logout"
+              >
+                <LogOut size={20} />
+              </button>
+            )}
+
+            <LanguageSwitcher />
+        </div>
       </div>
       <div
         style={{

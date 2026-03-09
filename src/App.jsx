@@ -3792,7 +3792,13 @@ ${'='.repeat(50)}
         }} isDesktop />
       </div>
       <div className="ml-0 md:ml-64 max-w-6xl mx-auto px-4">
-        <ProLayout>
+        <ProLayout
+          onAdmin={() => setTela('admin')}
+          onLogout={() => {
+            supabaseService.logout();
+            setUsuarioAutenticado(null);
+          }}
+        >
           {String(usuarioAutenticado?.nivelAcesso || '').toUpperCase() === 'MASTER' ? (
             <MasterDashboard
               unidades={unidades}
