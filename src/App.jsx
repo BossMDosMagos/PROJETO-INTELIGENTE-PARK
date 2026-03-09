@@ -3793,6 +3793,7 @@ ${'='.repeat(50)}
       </div>
       <div className="ml-0 md:ml-64 max-w-6xl mx-auto px-4">
         <ProLayout
+          unidades={unidades}
           onAdmin={() => setTela('admin')}
           onLogout={() => {
             supabaseService.logout();
