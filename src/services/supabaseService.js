@@ -884,10 +884,23 @@ class SupabaseService {
 
   /**
    * Cria um novo pátio
-   * @param {Object} patio - { nome, endereco, cidade, estado, qtd_vagas, telefone, email, descricao }
+   * @param {Object} patio - { nome, cep, endereco, numero, cidade, estado, qtd_vagas, telefone, email, descricao, latitude, longitude }
    * @returns {Promise<Object>} { sucesso, dados, erro }
    */
-  async criarPatio({ nome, endereco = '', cidade = '', estado = '', qtd_vagas = 0, telefone = '', email = '', descricao = '' }) {
+  async criarPatio({ 
+    nome, 
+    cep = '',
+    endereco = '', 
+    numero = '',
+    cidade = '', 
+    estado = '', 
+    qtd_vagas = 0, 
+    telefone = '', 
+    email = '', 
+    descricao = '',
+    latitude = null,
+    longitude = null
+  }) {
     if (!this.initialized) {
       return { sucesso: false, erro: 'Supabase não inicializado' };
     }
@@ -900,22 +913,57 @@ class SupabaseService {
       const nomeNormalizado = String(nome).trim();
       const usuarioId = this.usuarioAtual?.id;
 
+      // Verificar manualmente se já existe (soft delete ou ativo) para evitar erro fantasma
+      const { data: patiosExistentes } = await this.client
+        .from('patios')
+        .select('id, nome, ativo')
+        .eq('nome', nomeNormalizado);
+
+      if (patiosExistentes && patiosExistentes.length > 0) {
+        // Se existe e está inativo (soft delete), reativar e atualizar
+        const patioExistente = patiosExistentes[0];
+        if (!patioExistente.ativo) {
+          return this.atualizarPatio(patioExistente.id, {
+            ativo: true,
+            cep: cep?.trim() || null,
+            endereco: endereco?.trim() || null,
+            numero: numero?.trim() || null,
+            cidade: cidade?.trim() || null,
+            estado: estado?.trim()?.toUpperCase() || null,
+            qtd_vagas: parseInt(qtd_vagas) || 0,
+            telefone: telefone?.trim() || null,
+            email: email?.trim() || null,
+            descricao: descricao?.trim() || null,
+            latitude: latitude,
+            longitude: longitude,
+            updated_at: new Date().toISOString()
+          });
+        } else {
+          return { sucesso: false, erro: 'Já existe um pátio ativo com este nome' };
+        }
+      }
+
+      // Se não existe, criar novo
       const { data, error } = await this.client.from('patios').insert({
         nome: nomeNormalizado,
+        cep: cep?.trim() || null,
         endereco: endereco?.trim() || null,
+        numero: numero?.trim() || null,
         cidade: cidade?.trim() || null,
         estado: estado?.trim()?.toUpperCase() || null,
         qtd_vagas: parseInt(qtd_vagas) || 0,
         telefone: telefone?.trim() || null,
         email: email?.trim() || null,
         descricao: descricao?.trim() || null,
+        latitude: latitude,
+        longitude: longitude,
         ativo: true,
         created_by: usuarioId
       }).select();
 
       if (error) {
         if (error.code === '23505') {
-          return { sucesso: false, erro: 'Já existe um pátio com este nome' };
+          return { sucesso: false, erro: 'Já existe um pátio com este nome (erro de constraint)' };
         }
         throw error;
       }

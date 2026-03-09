@@ -25,31 +25,42 @@ const getColor = (pct) => {
   return '#ef4444';
 };
 
-export default function ProLayout({ children, onAdmin, onLogout, unidades = [] }) {
-  const [showMap, setShowMap] = useState(false);
+export default function ProLayout({ children, onAdmin, onLogout, onToggleMap, unidades = [], fullScreen = false }) {
+  // Estado Modal removido - Mapa agora é sempre parte do Dashboard principal
 
   return (
     <div
       style={{
         minHeight: '100vh',
         backgroundColor: '#0F172A',
-        backgroundImage:
+        backgroundImage: fullScreen ? 'none' : 
           'radial-gradient(1000px 500px at 10% 0%, rgba(0,122,255,0.08) 0%, transparent 60%), radial-gradient(800px 400px at 90% 20%, rgba(0,122,255,0.06) 0%, transparent 60%)',
         color: 'white',
-        padding: 16
+        paddingTop: fullScreen ? 0 : 16,
+        paddingLeft: fullScreen ? 0 : 16,
+        paddingRight: fullScreen ? 0 : 16,
+        overflow: fullScreen ? 'hidden' : 'auto'
       }}
     >
       <div
         style={{
-          maxWidth: 1280,
-          margin: '0 auto',
-          marginBottom: 16,
+          maxWidth: fullScreen ? '100%' : 1280,
+          margin: fullScreen ? 0 : '0 auto',
+          marginBottom: fullScreen ? 0 : 16,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          gap: 12
+          gap: 12,
+          position: fullScreen ? 'fixed' : 'relative',
+          top: fullScreen ? 16 : 0,
+          right: fullScreen ? 16 : 0,
+          left: fullScreen ? 'auto' : 0,
+          zIndex: 1001, // Acima do Mapa
+          pointerEvents: 'none', // Permite clicar no mapa atrás se não estiver em cima dos botões
+          width: fullScreen ? 'auto' : '100%'
         }}
       >
+        {!fullScreen && (
         <div
           style={{
             display: 'flex',
@@ -81,26 +92,29 @@ export default function ProLayout({ children, onAdmin, onLogout, unidades = [] }
             <div style={{ fontSize: 12, opacity: 0.7 }}>Luxury UI • Glass • Bento</div>
           </div>
         </div>
+        )}
         
-        <div style={{ display: 'flex', gap: 10 }}>
-            {/* Botão Mapa */}
-            <button
-              onClick={() => setShowMap(true)}
-              style={{
-                padding: 10,
-                borderRadius: 12,
-                background: 'rgba(59, 130, 246, 0.2)',
-                border: '1px solid rgba(59, 130, 246, 0.3)',
-                color: '#60a5fa',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
-              title="Abrir Mapa"
-            >
-              <MapIcon size={20} />
-            </button>
+        <div style={{ display: 'flex', gap: 10, pointerEvents: 'auto' }}>
+            {/* Botão de Mapa (Alterna Full Screen) */}
+            {onToggleMap && (
+              <button
+                onClick={onToggleMap}
+                style={{
+                  padding: 10,
+                  borderRadius: 12,
+                  background: 'rgba(59, 130, 246, 0.2)',
+                  border: '1px solid rgba(59, 130, 246, 0.3)',
+                  color: '#60a5fa',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+                title={fullScreen ? "Sair do Mapa" : "Abrir Mapa Tático"}
+              >
+                <MapIcon size={20} />
+              </button>
+            )}
 
             {onAdmin && (
               <button
@@ -145,88 +159,19 @@ export default function ProLayout({ children, onAdmin, onLogout, unidades = [] }
             <LanguageSwitcher />
         </div>
       </div>
+      
+      {/* Container de conteúdo */}
       <div
         style={{
-          maxWidth: 1280,
-          margin: '0 auto',
-          display: 'grid',
-          gap: 16
+          maxWidth: fullScreen ? '100%' : 1280,
+          margin: fullScreen ? 0 : '0 auto',
+          display: fullScreen ? 'block' : 'grid',
+          gap: fullScreen ? 0 : 16,
+          height: fullScreen ? '100vh' : 'auto'
         }}
       >
         {children}
       </div>
-
-      {/* Modal Mapa */}
-      {showMap && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0,0,0,0.8)',
-          backdropFilter: 'blur(5px)',
-          zIndex: 9999,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: 20
-        }}>
-          <div style={{
-            width: '100%',
-            maxWidth: 1000,
-            height: '80vh',
-            background: '#1e293b',
-            borderRadius: 16,
-            overflow: 'hidden',
-            display: 'flex',
-            flexDirection: 'column',
-            border: '1px solid rgba(255,255,255,0.1)'
-          }}>
-            <div style={{
-              padding: 16,
-              borderBottom: '1px solid rgba(255,255,255,0.1)',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center'
-            }}>
-              <h2 style={{ fontSize: 18, fontWeight: 'bold' }}>Mapa de Unidades em Tempo Real</h2>
-              <button 
-                onClick={() => setShowMap(false)}
-                style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer' }}
-              >
-                <X size={24} />
-              </button>
-            </div>
-            <div style={{ flex: 1, position: 'relative' }}>
-               <MapContainer
-                  center={unidades.length > 0 ? [unidades[0].lat, unidades[0].lng] : [-23.550520, -46.633308]}
-                  zoom={unidades.length > 0 ? 15 : 12}
-                  style={{ width: '100%', height: '100%' }}
-                >
-                  <TileLayer
-                    attribution='&copy; OpenStreetMap'
-                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                  />
-                  {unidades.map(u => (
-                    <CircleMarker
-                      key={u.id}
-                      center={[u.lat, u.lng]}
-                      radius={10}
-                      pathOptions={{ color: getColor(u.ocupacao || 0), fillColor: getColor(u.ocupacao || 0), fillOpacity: 0.9 }}
-                    >
-                      <Popup>
-                        <strong>{u.nome}</strong><br/>
-                        Ocupação: {u.ocupacao || 0}%<br/>
-                        Fat: R$ {u.faturamento || 0}
-                      </Popup>
-                    </CircleMarker>
-                  ))}
-                </MapContainer>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

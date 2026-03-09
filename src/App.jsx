@@ -169,26 +169,23 @@ function App() {
   const [salvandoPatio, setSalvandoPatio] = useState(false);
   const [formPatio, setFormPatio] = useState({
     nome: '',
+    cep: '',
     endereco: '',
+    numero: '',
     cidade: '',
     estado: '',
     qtd_vagas: '',
     telefone: '',
     email: '',
-    descricao: ''
+    descricao: '',
+    latitude: '',
+    longitude: ''
   });
+  
+  // Estado para tipo de localização (endereco ou coordenadas)
+  const [tipoLocalizacao, setTipoLocalizacao] = useState('endereco'); // 'endereco' | 'coordenadas'
 
-  // Mapa de unidades baseado nos pátios cadastrados
-  const unidadesMapa = useMemo(() => {
-    return patiosAdmin.map(patio => ({
-      id: patio.id,
-      nome: patio.nome,
-      lat: -23.55, // Placeholder - ideal seria ter lat/lng no cadastro de pátio
-      lng: -46.63, // Placeholder
-      ocupacao: Math.round((veiculos.length / (patio.qtd_vagas || 100)) * 100),
-      faturamento: totalArrecadadoDia
-    }));
-  }, [patiosAdmin, veiculos, totalArrecadadoDia]);
+
 
 
   // Estados para navegação do Admin
@@ -1411,6 +1408,66 @@ ${'='.repeat(50)}
     }
   };
 
+  const buscarCepAutomatico = async (valorCep) => {
+    const cep = valorCep.replace(/\D/g, '');
+    
+    // Atualiza o estado primeiro
+    setFormPatio(prev => ({ ...prev, cep: valorCep }));
+
+    if (cep.length !== 8) return;
+
+    try {
+      const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+      const data = await response.json();
+
+      if (data.erro) {
+        showToast('CEP não encontrado.', 'error');
+        return;
+      }
+
+      setFormPatio(prev => ({
+        ...prev,
+        cep: valorCep,
+        endereco: data.logradouro || '',
+        cidade: data.localidade || '',
+        estado: data.uf || '',
+        // Preserva outros campos
+      }));
+      showToast('Endereço encontrado!', 'success');
+    } catch (error) {
+      console.error('Erro ao buscar CEP:', error);
+      // Não mostra erro intrusivo no onChange, apenas loga
+    }
+  };
+
+  const editarPatioAdmin = (patio) => {
+    setFormPatio({
+      id: patio.id, // Importante para identificar que é edição
+      nome: patio.nome,
+      cep: patio.cep || '',
+      endereco: patio.endereco || '',
+      numero: patio.numero || '',
+      cidade: patio.cidade || '',
+      estado: patio.estado || '',
+      qtd_vagas: patio.qtd_vagas || '',
+      telefone: patio.telefone || '',
+      email: patio.email || '',
+      descricao: patio.descricao || '',
+      latitude: patio.latitude || '',
+      longitude: patio.longitude || ''
+    });
+    
+    // Define o tipo de localização com base nos dados
+    if (patio.latitude && patio.longitude) {
+      setTipoLocalizacao('coordenadas');
+    } else {
+      setTipoLocalizacao('endereco');
+    }
+    
+    // Rola para o topo do formulário
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const criarPatioAdmin = async () => {
     const nome = formPatio.nome.trim();
 
@@ -1422,23 +1479,51 @@ ${'='.repeat(50)}
     setSalvandoPatio(true);
 
     try {
-      const resultado = await supabaseService.criarPatio({
+      const dadosPatio = {
         nome,
-        endereco: formPatio.endereco.trim(),
-        cidade: formPatio.cidade.trim(),
-        estado: formPatio.estado.trim(),
         qtd_vagas: formPatio.qtd_vagas,
         telefone: formPatio.telefone.trim(),
         email: formPatio.email.trim(),
         descricao: formPatio.descricao.trim()
-      });
+      };
+
+      // Adiciona campos baseados no tipo de localização
+      if (tipoLocalizacao === 'endereco') {
+        dadosPatio.cep = formPatio.cep.trim();
+        dadosPatio.endereco = formPatio.endereco.trim();
+        dadosPatio.numero = formPatio.numero.trim();
+        dadosPatio.cidade = formPatio.cidade.trim();
+        dadosPatio.estado = formPatio.estado.trim();
+        // Limpa lat/lng se estiver usando endereço (será calculado pelo mapa)
+        dadosPatio.latitude = null;
+        dadosPatio.longitude = null;
+      } else {
+        // Modo Coordenadas
+        dadosPatio.latitude = parseFloat(formPatio.latitude);
+        dadosPatio.longitude = parseFloat(formPatio.longitude);
+        // Pode manter endereço vazio ou tentar preencher reverso (opcional, aqui deixaremos vazio para não confundir)
+        dadosPatio.cep = '';
+        dadosPatio.endereco = 'Localização via GPS';
+        dadosPatio.numero = 'S/N';
+        dadosPatio.cidade = '';
+        dadosPatio.estado = '';
+      }
+
+      let resultado;
+      if (formPatio.id) {
+        // Modo Edição
+        resultado = await supabaseService.atualizarPatio(formPatio.id, dadosPatio);
+      } else {
+        // Modo Criação
+        resultado = await supabaseService.criarPatio(dadosPatio);
+      }
 
       if (!resultado.sucesso) {
-        showToast(`Erro ao criar pátio: ${resultado.erro}`, 'error', 5000);
+        showToast(`Erro ao salvar pátio: ${resultado.erro}`, 'error', 5000);
         return;
       }
 
-      showToast('Pátio criado com sucesso!', 'success');
+      showToast(formPatio.id ? 'Pátio atualizado com sucesso!' : 'Pátio criado com sucesso!', 'success');
       limparFormularioPatio();
       await carregarPatios();
     } finally {
@@ -1854,6 +1939,24 @@ ${'='.repeat(50)}
     () => caixaInicialAtual + totalArrecadadoDia,
     [caixaInicialAtual, totalArrecadadoDia]
   );
+
+  // Mapa de unidades baseado nos pátios cadastrados
+  const unidadesMapa = useMemo(() => {
+    return patiosAdmin.map(patio => ({
+      id: patio.id,
+      nome: patio.nome,
+      lat: -23.55, // Placeholder - ideal seria ter lat/lng no cadastro de pátio
+      lng: -46.63, // Placeholder
+      cep: patio.cep,
+      endereco: patio.endereco,
+      numero: patio.numero,
+      cidade: patio.cidade,
+      estado: patio.estado,
+      ocupacao: Math.round((veiculos.length / (patio.qtd_vagas || 100)) * 100),
+      faturamento: totalArrecadadoDia
+    }));
+  }, [patiosAdmin, veiculos, totalArrecadadoDia]);
+
   const historicoGridData = useMemo(() => (
     historico.map((reg) => ({
       id: reg.id,
@@ -1957,22 +2060,33 @@ ${'='.repeat(50)}
       ),
       telefone: patio.telefone || <span style={{ color: DESIGN.colors.neutral[400] }}>n/a</span>,
       acao: (
-        <Button
-          variant="danger"
-          size="sm"
-          onClick={() => setConfirmDialog({
-            titulo: 'Remover pátio',
-            mensagem: `Confirma remover o pátio "${patio.nome}"?`,
-            onConfirm: () => removerPatioAdmin(patio)
-          })}
-        >
-          <Trash2 className="w-4 h-4" style={{ marginRight: DESIGN.spacing.xs }} />
-          Deletar
-        </Button>
+        <div className="flex gap-2 justify-center">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => editarPatioAdmin(patio)}
+            title="Editar Pátio"
+          >
+            ✏️
+          </Button>
+          <Button
+            variant="danger"
+            size="sm"
+            onClick={() => setConfirmDialog({
+              titulo: 'Remover pátio',
+              mensagem: `Confirma remover o pátio "${patio.nome}"?`,
+              onConfirm: () => removerPatioAdmin(patio)
+            })}
+          >
+            <Trash2 className="w-4 h-4" />
+          </Button>
+        </div>
       )
     })),
     [patiosAdmin]
   );
+
+  const [mostrarMapaFullScreen, setMostrarMapaFullScreen] = useState(false);
 
   // MODO CADASTRO PÚBLICO (Via link WhatsApp)
   if (modoCadastroPublico) {
@@ -2346,7 +2460,7 @@ ${'='.repeat(50)}
             </div>
 
             <div className="grid md:grid-cols-2 gap-4 mb-5">
-              <div>
+              <div className="md:col-span-2">
                 <label className="block text-sm font-semibold mb-2">Nome do Pátio *</label>
                 <Input
                   type="text"
@@ -2356,36 +2470,117 @@ ${'='.repeat(50)}
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-semibold mb-2">Cidade</label>
-                <Input
-                  type="text"
-                  value={formPatio.cidade}
-                  onChange={(e) => setFormPatio({ ...formPatio, cidade: e.target.value })}
-                  placeholder="ex: São Paulo"
-                />
+              {/* Seletor de Tipo de Localização */}
+              <div className="md:col-span-2 flex gap-4 p-2 bg-gray-50 rounded-lg border border-gray-200">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="tipoLocalizacao"
+                    value="endereco"
+                    checked={tipoLocalizacao === 'endereco'}
+                    onChange={() => setTipoLocalizacao('endereco')}
+                    className="w-4 h-4 text-blue-600"
+                  />
+                  <span className="text-sm font-medium text-gray-700">📍 Endereço (CEP)</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="tipoLocalizacao"
+                    value="coordenadas"
+                    checked={tipoLocalizacao === 'coordenadas'}
+                    onChange={() => setTipoLocalizacao('coordenadas')}
+                    className="w-4 h-4 text-blue-600"
+                  />
+                  <span className="text-sm font-medium text-gray-700">🌍 Coordenadas (GPS)</span>
+                </label>
               </div>
 
-              <div>
-                <label className="block text-sm font-semibold mb-2">Endereço</label>
-                <Input
-                  type="text"
-                  value={formPatio.endereco}
-                  onChange={(e) => setFormPatio({ ...formPatio, endereco: e.target.value })}
-                  placeholder="ex: Rua Santos, 100"
-                />
-              </div>
+              {tipoLocalizacao === 'endereco' ? (
+                <>
+                  <div>
+                    <label className="block text-sm font-semibold mb-2">CEP</label>
+                    <Input
+                      type="text"
+                      value={formPatio.cep}
+                      onChange={(e) => buscarCepAutomatico(e.target.value)}
+                      placeholder="00000-000"
+                      maxLength={9}
+                    />
+                  </div>
 
-              <div>
-                <label className="block text-sm font-semibold mb-2">Estado (UF)</label>
-                <Input
-                  type="text"
-                  value={formPatio.estado}
-                  onChange={(e) => setFormPatio({ ...formPatio, estado: e.target.value.toUpperCase() })}
-                  maxLength="2"
-                  placeholder="ex: SP"
-                />
-              </div>
+                  <div>
+                    <label className="block text-sm font-semibold mb-2">Cidade</label>
+                    <Input
+                      type="text"
+                      value={formPatio.cidade}
+                      onChange={(e) => setFormPatio({ ...formPatio, cidade: e.target.value })}
+                      placeholder="ex: São Paulo"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold mb-2">Estado (UF)</label>
+                    <Input
+                      type="text"
+                      value={formPatio.estado}
+                      onChange={(e) => setFormPatio({ ...formPatio, estado: e.target.value.toUpperCase() })}
+                      maxLength="2"
+                      placeholder="ex: SP"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold mb-2">Endereço (Rua/Av)</label>
+                    <Input
+                      type="text"
+                      value={formPatio.endereco}
+                      onChange={(e) => setFormPatio({ ...formPatio, endereco: e.target.value })}
+                      placeholder="ex: Rua Santos"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold mb-2">Número</label>
+                    <Input
+                      type="text"
+                      value={formPatio.numero}
+                      onChange={(e) => setFormPatio({ ...formPatio, numero: e.target.value })}
+                      placeholder="ex: 100"
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <label className="block text-sm font-semibold mb-2">Latitude</label>
+                    <Input
+                      type="number"
+                      step="any"
+                      min="-90"
+                      max="90"
+                      value={formPatio.latitude}
+                      onChange={(e) => setFormPatio({ ...formPatio, latitude: e.target.value })}
+                      placeholder="ex: -23.550520"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold mb-2">Longitude</label>
+                    <Input
+                      type="number"
+                      step="any"
+                      min="-180"
+                      max="180"
+                      value={formPatio.longitude}
+                      onChange={(e) => setFormPatio({ ...formPatio, longitude: e.target.value })}
+                      placeholder="ex: -46.633308"
+                    />
+                  </div>
+                  <div className="md:col-span-2 text-xs text-gray-500">
+                    💡 Use coordenadas do Google Maps para maior precisão em locais sem número.
+                  </div>
+                </>
+              )}
 
               <div>
                 <label className="block text-sm font-semibold mb-2">Quantidade de Vagas</label>
@@ -3786,7 +3981,7 @@ ${'='.repeat(50)}
           if (item === 'logout') { supabaseService.logout(); setUsuarioAutenticado(null); }
         }} isDesktop />
       </div>
-      <div className="ml-0 md:ml-64 max-w-6xl mx-auto px-4">
+      <div className="ml-0 md:ml-64 max-w-6xl mx-auto px-4" style={String(usuarioAutenticado?.nivelAcesso || '').toUpperCase() === 'MASTER' ? { maxWidth: '100%', margin: 0, padding: 0 } : {}}>
         <ProLayout
           unidades={unidadesMapa.length > 0 ? unidadesMapa : [{
             id: 'default',
@@ -3801,8 +3996,10 @@ ${'='.repeat(50)}
             supabaseService.logout();
             setUsuarioAutenticado(null);
           }}
+          onToggleMap={() => setMostrarMapaFullScreen(!mostrarMapaFullScreen)}
+          fullScreen={String(usuarioAutenticado?.nivelAcesso || '').toUpperCase() === 'MASTER' || mostrarMapaFullScreen}
         >
-          {String(usuarioAutenticado?.nivelAcesso || '').toUpperCase() === 'MASTER' ? (
+          {(String(usuarioAutenticado?.nivelAcesso || '').toUpperCase() === 'MASTER' || mostrarMapaFullScreen) ? (
             <MasterDashboard
               unidades={unidadesMapa.length > 0 ? unidadesMapa : [{
                 id: 'default',
