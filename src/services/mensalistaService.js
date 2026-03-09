@@ -1,3 +1,5 @@
+import { supabaseService } from './supabaseService';
+
 /**
  * Serviço de Mensalistas - Cadastro e Gerenciamento
  */
@@ -10,8 +12,17 @@ export class MensalistaService {
   /**
    * Obter todos os mensalistas
    */
-  getAll() {
+  async getAll() {
     try {
+      // Tenta buscar do Supabase primeiro
+      if (supabaseService.isOnline && supabaseService.initialized) {
+        const resultado = await supabaseService.obterDados('mensalistas');
+        if (resultado.sucesso) {
+           return resultado.dados;
+        }
+      }
+      
+      // Fallback para localStorage
       const dados = localStorage.getItem(this.storageKey);
       return dados ? JSON.parse(dados) : [];
     } catch (e) {
@@ -23,19 +34,47 @@ export class MensalistaService {
   /**
    * Criar novo mensalista (status: PENDENTE)
    */
-  criar(dados) {
+  async criar(dados) {
     try {
-      const mensalistas = this.getAll();
-      
       // Validar dados obrigatórios
       if (!dados.nome || !dados.cpf || !dados.placa) {
         throw new Error('Nome, CPF e placa são obrigatórios');
       }
 
-      // Validar se placa já existe
-      if (mensalistas.some(m => m.placa.toUpperCase() === dados.placa.toUpperCase())) {
-        throw new Error('Placa já cadastrada');
+      // Remover registro rotativo anterior se existir (para evitar duplicidade)
+      const veiculos = JSON.parse(localStorage.getItem('veiculos') || '[]');
+      const veiculoRotativoIndex = veiculos.findIndex(v => v.placa === dados.placa.toUpperCase());
+      
+      if (veiculoRotativoIndex !== -1) {
+        veiculos.splice(veiculoRotativoIndex, 1);
+        localStorage.setItem('veiculos', JSON.stringify(veiculos));
       }
+
+      // Tentar salvar no Supabase (Prioridade)
+      if (supabaseService.isOnline && supabaseService.initialized) {
+         const resultado = await supabaseService.criarMensalista({
+            nome: dados.nome,
+            cpf: dados.cpf,
+            placa: dados.placa,
+            modelo: dados.modelo,
+            cor: dados.cor,
+            whatsapp: dados.whatsapp,
+            status: 'PENDENTE'
+         });
+
+         if (!resultado.sucesso) {
+            throw new Error(resultado.erro);
+         }
+
+         return { sucesso: true, mensalista: resultado.dados };
+      }
+
+      // Fallback para localStorage (apenas se offline, mas idealmente não deveria permitir cadastro público offline)
+      const mensalistas = JSON.parse(localStorage.getItem(this.storageKey) || '[]');
+      
+      // Validar duplicidade local
+      const placaExiste = mensalistas.find(m => m.placa.toUpperCase() === dados.placa.toUpperCase());
+      if (placaExiste) throw new Error(`A placa ${dados.placa} já possui cadastro local.`);
 
       const novoMensalista = {
         id: Date.now(),
@@ -45,7 +84,7 @@ export class MensalistaService {
         placa: dados.placa.toUpperCase(),
         modelo: dados.modelo?.trim().toUpperCase() || '',
         cor: dados.cor?.trim().toUpperCase() || '',
-        status: 'PENDENTE', // PENDENTE, ATIVO, INATIVO
+        status: 'PENDENTE',
         dataCadastro: new Date().toISOString(),
         dataVencimento: null,
         dataAtivacao: null

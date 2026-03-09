@@ -116,9 +116,9 @@ export function PaginaCadastroMensalista() {
 
     setCarregando(true);
 
-    // Simular envio ao servidor (em produção seria uma chamada API)
-    setTimeout(() => {
-      const resultado = mensalistaService.criar(formData);
+    try {
+      // Envio real ao servidor (Supabase via Service)
+      const resultado = await mensalistaService.criar(formData);
 
       if (resultado.sucesso) {
         audioService.sucesso();
@@ -137,9 +137,13 @@ export function PaginaCadastroMensalista() {
         audioService.erro();
         setErro(resultado.erro);
       }
-
+    } catch (error) {
+      console.error('Erro ao enviar cadastro:', error);
+      audioService.erro();
+      setErro('Erro de conexão. Tente novamente.');
+    } finally {
       setCarregando(false);
-    }, 1000);
+    }
   };
 
   // Formatadores de exibição
