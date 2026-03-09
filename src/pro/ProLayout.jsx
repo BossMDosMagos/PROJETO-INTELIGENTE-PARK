@@ -25,7 +25,7 @@ const getColor = (pct) => {
   return '#ef4444';
 };
 
-export default function ProLayout({ children, onAdmin, onLogout, onToggleMap, unidades = [], fullScreen = false }) {
+export default function ProLayout({ children, onAdmin, onLogout, onToggleMap, unidades = [], fullScreen = false, config = {} }) {
   // Estado Modal removido - Mapa agora é sempre parte do Dashboard principal
 
   return (
@@ -43,6 +43,71 @@ export default function ProLayout({ children, onAdmin, onLogout, onToggleMap, un
         fontFamily: DESIGN.typography.family.base
       }}
     >
+      {/* Mapa Tático - Agora integrado como fundo ou componente principal */}
+      <div 
+        className="fixed inset-0 z-0 transition-all duration-700 ease-in-out"
+        style={{ 
+          opacity: fullScreen ? 1 : 0.3,
+          pointerEvents: fullScreen ? 'auto' : 'none',
+          filter: fullScreen ? 'none' : 'grayscale(80%) contrast(120%) brightness(60%) blur(2px)'
+        }}
+      >
+        <MapContainer
+          center={[-23.550520, -46.633308]}
+          zoom={13}
+          style={{ height: '100%', width: '100%', background: '#02040A' }}
+          zoomControl={false}
+          attributionControl={false}
+        >
+          {/* Tile Layer Dark Matter (CartoDB) - Visual Cyberpunk/Tático */}
+          <TileLayer
+            url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+            subdomains="abcd"
+            maxZoom={20}
+          />
+          {unidades.map(u => (
+            <CircleMarker
+              key={u.id}
+              center={[u.lat, u.lng]}
+              pathOptions={{
+                color: getColor(u.ocupacao),
+                fillColor: getColor(u.ocupacao),
+                fillOpacity: 0.6,
+                weight: 2
+              }}
+              radius={12 + (u.ocupacao / 10)}
+            >
+              <Popup className="custom-popup">
+                <div className="p-2 min-w-[200px] bg-[#0F172A] text-white rounded-lg border border-slate-700">
+                  <h3 className="font-bold text-lg mb-1">{u.nome}</h3>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-slate-400">Ocupação:</span>
+                      <span className="font-mono font-bold text-cyan-400">{u.ocupacao}%</span>
+                    </div>
+                    <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
+                      <div 
+                        className="h-full transition-all duration-500"
+                        style={{ 
+                          width: `${u.ocupacao}%`,
+                          backgroundColor: getColor(u.ocupacao)
+                        }}
+                      />
+                    </div>
+                    <div className="flex justify-between items-center pt-2 border-t border-slate-700">
+                      <span className="text-xs text-slate-400">Faturamento:</span>
+                      <span className="font-mono font-bold text-emerald-400">
+                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(u.faturamento || 0)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </Popup>
+            </CircleMarker>
+          ))}
+        </MapContainer>
+      </div>
+
       <div
         style={{
           maxWidth: fullScreen ? '100%' : 1280,
@@ -75,24 +140,34 @@ export default function ProLayout({ children, onAdmin, onLogout, onToggleMap, un
             boxShadow: '0 4px 30px rgba(0, 0, 0, 0.3)' // Sombra sofisticada
           }}
         >
-          <div
-            style={{
-              width: 36,
-              height: 36,
-              borderRadius: 12,
-              backgroundImage: `linear-gradient(135deg, ${DESIGN.colors.richForest.DEFAULT} 0%, ${DESIGN.colors.richForest.accent} 100%)`, // Rich Forest Gradient
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontWeight: 900,
-              boxShadow: `0 0 15px ${DESIGN.colors.richForest.DEFAULT}` // Glow effect
-            }}
-          >
-            P
-          </div>
+          {config.logoUrl ? (
+             <div style={{ width: 36, height: 36 }}>
+                <img 
+                 src={config.logoUrl} 
+                 alt="Logo" 
+                 style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                />
+             </div>
+          ) : (
+            <div
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 12,
+                backgroundImage: `linear-gradient(135deg, #164e63 0%, #06b6d4 100%)`, // Cyan Gradient
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: 900,
+                boxShadow: `0 0 15px #0891b2` // Cyan Glow
+              }}
+            >
+              {config.nomeEmpresa ? config.nomeEmpresa.charAt(0).toUpperCase() : 'C'}
+            </div>
+          )}
           <div style={{ lineHeight: 1 }}>
-            <div style={{ fontWeight: 800, letterSpacing: 0.5, color: 'white' }}>RARE GROOVE PARK</div>
-            <div style={{ fontSize: 11, opacity: 0.7, color: DESIGN.colors.richForest.text, letterSpacing: 1 }}>SECURITY PROTOCOL V3.0</div>
+            <div style={{ fontWeight: 800, letterSpacing: 0.5, color: 'white', textTransform: 'uppercase' }}>{config.nomeEmpresa || 'COMMAND PARK'}</div>
+            <div style={{ fontSize: 11, opacity: 0.7, color: '#22d3ee', letterSpacing: 1 }}>SECURITY PROTOCOL V3.0</div>
           </div>
         </div>
         )}

@@ -25,15 +25,15 @@ export default function TopBarLegacy({
   const btn = (Icon, label, action, color) => (
     <button
       onClick={action}
-      className="h-12 px-4 rounded-lg font-bold text-sm flex items-center gap-2"
+      className="h-12 px-4 rounded-lg font-bold text-sm flex items-center gap-2 transition-all hover:bg-white/5 active:scale-95"
       style={{
-        backgroundColor: DESIGN.colors.neutral[200],
-        border: `2px solid ${DESIGN.colors.neutral[300]}`,
-        color: DESIGN.colors.neutral[800]
+        backgroundColor: 'rgba(255,255,255,0.05)',
+        border: '1px solid rgba(255,255,255,0.1)',
+        color: 'white'
       }}
       title={label}
     >
-      <Icon className="w-5 h-5" color={color} />
+      <Icon className="w-5 h-5" style={{ color: color || '#10B981' }} />
       <span>{label}</span>
     </button>
   );
@@ -52,37 +52,37 @@ export default function TopBarLegacy({
 
   return (
     <div
-      className="w-full sticky top-0 z-20"
+      className="w-full sticky top-0 z-20 backdrop-blur-md"
       style={{
-        backgroundColor: DESIGN.colors.primary[100],
-        borderBottom: `2px solid ${DESIGN.colors.primary[300]}`,
+        backgroundColor: DESIGN.colors.deepMidnight.light,
+        borderBottom: '1px solid rgba(255,255,255,0.1)',
         padding: `${DESIGN.spacing.sm}px ${DESIGN.spacing.md}px`,
-        boxShadow: DESIGN.shadow.sm
+        boxShadow: '0 4px 20px rgba(0,0,0,0.4)'
       }}
     >
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2 flex-wrap">
-          {btn(Car, 'F9 Pátio', () => onNavigate('patio'), DESIGN.colors.primary[600])}
-          {btn(CheckCircle, 'F6 Saídas', () => onNavigate('saidas'), DESIGN.colors.success[600])}
-          {btn(Calculator, 'F3 Cálculo', () => {}, DESIGN.colors.neutral[600])}
-          {btn(Info, 'F12 Sobre', () => {}, DESIGN.colors.neutral[600])}
-          {btn(DollarSign, 'F2 Gaveta', () => onNavigate('caixa'), DESIGN.colors.warning[600])}
-          {btn(HelpCircle, 'F1 Ajuda', () => {}, DESIGN.colors.primary[600])}
+          {btn(Car, 'F9 Pátio', () => onNavigate('patio'), '#3B82F6')}
+          {btn(CheckCircle, 'F6 Saídas', () => onNavigate('saidas'), '#10B981')}
+          {btn(Calculator, 'F3 Cálculo', () => {}, '#94A3B8')}
+          {btn(Info, 'F12 Sobre', () => {}, '#94A3B8')}
+          {btn(DollarSign, 'F2 Gaveta', () => onNavigate('caixa'), '#F59E0B')}
+          {btn(HelpCircle, 'F1 Ajuda', () => {}, '#8B5CF6')}
         </div>
 
         <div className="flex items-center gap-3">
           <div
             className="text-right hidden md:block"
-            style={{ color: DESIGN.colors.neutral[700] }}
+            style={{ color: '#94A3B8' }}
           >
-            <div className="text-xs font-bold uppercase">{formattedDate}</div>
+            <div className="text-xs font-bold uppercase tracking-widest">{formattedDate}</div>
           </div>
           <div
-            className="px-3 py-2 rounded-lg font-black"
+            className="px-3 py-2 rounded-lg font-black font-mono text-[#10B981]"
             style={{
-              backgroundColor: DESIGN.colors.neutral[50],
-              border: `2px solid ${DESIGN.colors.neutral[300]}`,
-              color: DESIGN.colors.neutral[900]
+              backgroundColor: 'rgba(0,0,0,0.3)',
+              border: '1px solid rgba(16, 185, 129, 0.2)',
+              boxShadow: '0 0 10px rgba(16, 185, 129, 0.1)'
             }}
           >
             {formattedTime}

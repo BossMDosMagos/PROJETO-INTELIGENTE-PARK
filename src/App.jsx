@@ -33,7 +33,17 @@ import ProLayout from './pro/ProLayout.jsx';
 import MasterDashboard from './pro/MasterDashboard.jsx';
 import OperatorDashboard from './pro/OperatorDashboard.jsx';
 import CaixaPro from './pro/CaixaPro.jsx';
+import GestaoOperadores from './components/admin/GestaoOperadores';
+import GestaoPatios from './components/admin/GestaoPatios';
+import GestaoImpressoras from './components/admin/GestaoImpressoras';
+import IdentidadeVisual from './components/admin/IdentidadeVisual';
+import LayoutTicket from './components/admin/LayoutTicket';
+import TabelaPrecos from './components/admin/TabelaPrecos';
+import LimpezaDados from './components/admin/LimpezaDados';
+import GestaoMensalistas from './components/admin/GestaoMensalistas';
+
 import { 
+  LogIn,
   Car, 
   Clock, 
   DollarSign, 
@@ -44,17 +54,52 @@ import {
   Home,
   History,
   Lock,
+  Mail,
   Printer,
   Bluetooth,
   AlertCircle,
   AlertTriangle,
   Users,
+  User,
   MessageCircle,
   Volume2,
   Bell,
   Eye,
-  EyeOff
+  EyeOff,
+  Ticket,
+  ArrowLeft
 } from 'lucide-react';
+
+// Componente AdminCard (Extraído para evitar re-renderização)
+const AdminCard = ({ icon: Icon, title, desc, color, onClick, badge }) => (
+  <button 
+    onClick={(e) => {
+      e.preventDefault();
+      if (onClick) onClick();
+    }}
+    className="group relative bg-[#1E293B]/40 backdrop-blur-md border border-slate-800 rounded-xl p-6 cursor-pointer transition-all duration-300 hover:bg-[#1E293B]/60 hover:border-cyan-500/30 hover:shadow-[0_0_30px_rgba(6,182,212,0.15)] hover:-translate-y-1 overflow-hidden z-20 text-left w-full h-full flex flex-col"
+    style={{ pointerEvents: 'auto' }}
+  >
+    <div className={`absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity`}>
+      <Icon className="w-24 h-24" style={{ color: color }} />
+    </div>
+    
+    <div className="relative z-10 flex flex-col h-full">
+      <div className={`w-12 h-12 rounded-lg flex items-center justify-center mb-4 transition-colors bg-slate-800/50 group-hover:bg-slate-800 shrink-0`}>
+        <Icon className="w-6 h-6" style={{ color: color }} />
+      </div>
+      
+      <h3 className="text-xl font-bold text-white mb-2 group-hover:text-cyan-50">{title}</h3>
+      <p className="text-sm text-slate-400 leading-relaxed flex-grow">{desc}</p>
+      
+      {badge && (
+        <div className="mt-4 inline-flex">
+          {badge}
+        </div>
+      )}
+    </div>
+  </button>
+);
 
 // Configurações padrão
 const CONFIG_PADRAO = {
@@ -130,7 +175,10 @@ function App() {
   const [tipoVeiculo, setTipoVeiculo] = useState('carro'); // 'carro' ou 'moto'
   const [sugestoesPlacas, setSugestoesPlacas] = useState([]);
   const [mostrarSugestoes, setMostrarSugestoes] = useState(false);
+  const [emailInput, setEmailInput] = useState('');
   const [senhaInput, setSenhaInput] = useState('');
+  const [lembrarLogin, setLembrarLogin] = useLocalStorage('park-lembrar-login', false);
+  const [emailSalvo, setEmailSalvo] = useLocalStorage('park-email-salvo', '');
   const [veiculoSelecionado, setVeiculoSelecionado] = useState(null);
   const [tempoAtual, setTempoAtual] = useState(Date.now());
   const [placaSaida, setPlacaSaida] = useState('');
@@ -247,11 +295,26 @@ function App() {
     setConfirmDialog(null);
   };
 
+  useEffect(() => {
+    let timeout;
+    if (authCarregando) {
+      timeout = setTimeout(() => {
+        setAuthCarregando(false);
+      }, 5000);
+    }
+    return () => clearTimeout(timeout);
+  }, [authCarregando]);
+
   // Detectar se foi acessado via link de cadastro público
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.has('cadastro')) {
       setModoCadastroPublico(true);
+    }
+    
+    // Restaurar email se "Lembrar de mim" estiver ativo
+    if (lembrarLogin && emailSalvo) {
+      setEmailInput(emailSalvo);
     }
   }, []);
 
@@ -1562,14 +1625,59 @@ ${'='.repeat(50)}
     setTipoLocalizacao('endereco');
   };
 
+  // Função para formatar CNPJ
+  const formatarCNPJ = (valor) => {
+    if (!valor) return '';
+    return valor
+      .replace(/\D/g, '') // Remove não dígitos
+      .replace(/^(\d{2})(\d)/, '$1.$2')
+      .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
+      .replace(/\.(\d{3})(\d)/, '.$1/$2')
+      .replace(/(\d{4})(\d)/, '$1-$2')
+      .replace(/(-\d{2})\d+?$/, '$1'); // Limita o tamanho
+  };
+
   // Login admin
-  const fazerLogin = () => {
+  const fazerLogin = async () => {
+    // 1. Tentar login via Supabase (Prioritário)
+    if (emailInput && senhaInput) {
+      setAuthCarregando(true);
+      try {
+        const { user, error } = await supabaseService.login(emailInput, senhaInput);
+        if (error) {
+          throw error;
+        }
+        // Sucesso: atualiza estado imediatamente e para carregamento
+        if (user) {
+          if (lembrarLogin) {
+            setEmailSalvo(emailInput);
+          } else {
+            setEmailSalvo('');
+          }
+          setUsuarioAutenticado(user);
+          setAuthCarregando(false);
+          setTela('home');
+          showToast('Bem-vindo de volta!', 'success');
+        }
+      } catch (error) {
+        console.error('Erro ao fazer login:', error);
+        showToast('Falha no login: ' + (error.message || 'Erro desconhecido'), 'error');
+      } finally {
+        setAuthCarregando(false);
+      }
+      return;
+    }
+
+    // 2. Fallback para senha local (Legado)
     if (senhaInput === SENHA_ADMIN) {
+      // Cria um usuário fake para admin local
+      const adminUser = { id: 'admin-local', email: 'admin@local', nivelAcesso: 'MASTER' };
+      setUsuarioAutenticado(adminUser);
       setTela('admin');
       setSenhaInput('');
+      showToast('Acesso Admin Local concedido', 'warning');
     } else {
-      showToast('Senha incorreta!', 'error');
-      setSenhaInput('');
+      showToast('Preencha email e senha ou a senha de admin local!', 'error');
     }
   };
 
@@ -2120,21 +2228,34 @@ ${'='.repeat(50)}
   // TELA DE LOGIN ADMIN
   if (tela === 'login-admin') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center p-4">
-        <div className="card max-w-md w-full">
+      <div className="min-h-screen bg-[#020617] flex items-center justify-center p-4 font-sans relative overflow-hidden">
+        {/* Background Effects */}
+        <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
+          <div className="absolute top-[20%] left-[20%] w-[40%] h-[40%] bg-cyan-500/10 rounded-full blur-[100px]" />
+          <div className="absolute bottom-[20%] right-[20%] w-[40%] h-[40%] bg-blue-600/10 rounded-full blur-[100px]" />
+        </div>
+
+        <div className="max-w-md w-full relative z-10 bg-[#1E293B]/40 backdrop-blur-md border border-slate-800 rounded-2xl p-8 shadow-2xl">
           <div className="flex items-center justify-center mb-6">
-            <Lock className="w-12 h-12 text-blue-600" />
+            <div className="p-4 bg-cyan-500/10 rounded-full border border-cyan-500/20">
+              <Lock className="w-10 h-10 text-cyan-400" />
+            </div>
           </div>
-          <h2 className="text-2xl font-bold text-center mb-6">Área Administrativa</h2>
-          <Input
-            type="password"
-            value={senhaInput}
-            onChange={(e) => setSenhaInput(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && fazerLogin()}
-            placeholder="Digite a senha"
-            autoFocus
-          />
-          <div style={{ display: 'flex', gap: DESIGN.spacing.sm, marginTop: DESIGN.spacing.md }}>
+          <h2 className="text-2xl font-bold text-center mb-2 text-white">Área Administrativa</h2>
+          <p className="text-slate-400 text-center mb-8 text-sm">Digite sua senha de acesso restrito</p>
+          
+          <div className="mb-6">
+            <Input
+              type="password"
+              value={senhaInput}
+              onChange={(e) => setSenhaInput(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && fazerLogin()}
+              placeholder="Digite a senha"
+              autoFocus
+            />
+          </div>
+          
+          <div className="flex flex-col gap-3">
             <Button 
               variant="primary" 
               fullWidth
@@ -2162,6 +2283,8 @@ ${'='.repeat(50)}
           onConfirm={confirmarDialogo}
           onCancel={cancelarDialogo}
         />
+        {renderModalControleCaixa()}
+        {renderRelatorioFechamento()}
       </div>
     );
   }
@@ -2171,1771 +2294,327 @@ ${'='.repeat(50)}
     // Menu Principal do Admin
     if (!secaoAdmin) {
       return (
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 p-4">
-          <div className="max-w-6xl mx-auto">
+        <div className="min-h-screen bg-[#020617] text-slate-100 p-4 font-sans relative overflow-hidden">
+          {/* Background Effects */}
+          <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
+            <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-cyan-500/10 rounded-full blur-[100px]" />
+            <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-600/10 rounded-full blur-[100px]" />
+          </div>
+
+          <div className="max-w-7xl mx-auto relative z-10">
             {/* Header */}
-            <div className="flex items-center justify-between mb-6">
-              <h1 className="text-3xl font-bold text-blue-900 flex items-center gap-2">
-                <Settings className="w-8 h-8" />
-                Administração
-              </h1>
+            <div className="flex items-center justify-between mb-8 pt-4">
+              <div className="flex flex-col">
+                <h1 className="text-3xl font-bold text-white flex items-center gap-3 tracking-tight">
+                  <div className="p-2 bg-cyan-500/20 rounded-lg border border-cyan-500/30">
+                    <Settings className="w-8 h-8 text-cyan-400" />
+                  </div>
+                  Painel de Comando
+                </h1>
+                <p className="text-slate-400 mt-1 ml-14">Configurações globais do sistema Command Park</p>
+              </div>
               <Button 
                 variant="secondary" 
                 onClick={() => setTela('home')}
-                style={{ display: 'flex', alignItems: 'center', gap: DESIGN.spacing.sm }}
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '8px',
+                  background: 'rgba(30, 41, 59, 0.5)',
+                  borderColor: 'rgba(51, 65, 85, 0.5)',
+                  color: '#94a3b8',
+                  backdropFilter: 'blur(8px)'
+                }}
               >
                 <Home className="w-5 h-5" />
-                Voltar
+                Voltar ao Dashboard
               </Button>
             </div>
 
             {/* Grade de Botões */}
-            <CardGrid columns={3} gap="lg">
-              {/* Gestão de Operadores */}
-              <Card 
-                variant="primary"
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 relative z-50">
+              <AdminCard 
+                icon={Users}
+                title="Gestão de Operadores"
+                desc="Gerencie contas de acesso, redefina senhas e configure níveis de permissão da equipe."
+                color="#22d3ee"
                 onClick={() => setSecaoAdmin('operadores')}
-                interactive
-              >
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: DESIGN.spacing.sm }}>
-                  <Users className="w-10 h-10" style={{ color: DESIGN.colors.primary[600] }} />
-                  <h2 className="text-xl font-bold text-gray-900">Gestão de Operadores</h2>
-                  <p className="text-sm text-gray-600 mt-2">Criar e gerenciar operadores com políticas de acesso</p>
-                </div>
-              </Card>
+              />
 
-              {/* Gestão de Pátios */}
-              <Card 
-                variant="success"
+              <AdminCard 
+                icon={Home}
+                title="Gestão de Pátios"
+                desc="Cadastre novas unidades, configure endereços, coordenadas GPS e capacidade de vagas."
+                color="#34d399"
                 onClick={() => setSecaoAdmin('patios')}
-                interactive
-              >
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: DESIGN.spacing.sm }}>
-                  <Home className="w-10 h-10" style={{ color: DESIGN.colors.success[600] }} />
-                  <h2 className="text-xl font-bold text-gray-900">Gestão de Pátios</h2>
-                  <p className="text-sm text-gray-600 mt-2">Cadastrar e gerenciar pátios de estacionamento</p>
-                </div>
-              </Card>
+              />
 
-              {/* Impressoras */}
-              <Card 
-                variant="warning"
+              <AdminCard 
+                icon={Printer}
+                title="Impressoras & Hardware"
+                desc="Conecte impressoras térmicas via Bluetooth/USB e configure dispositivos de entrada."
+                color="#fbbf24"
                 onClick={() => setSecaoAdmin('impressoras')}
-                interactive
-              >
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: DESIGN.spacing.sm }}>
-                  <Printer className="w-10 h-10" style={{ color: DESIGN.colors.warning[600] }} />
-                  <h2 className="text-xl font-bold text-gray-900">Impressoras</h2>
-                  <p className="text-sm text-gray-600 mt-2">Configurar impressoras Bluetooth e USB</p>
-                </div>
-              </Card>
+              />
 
-              {/* Personalização */}
-              <Card 
-                variant="primary"
+              <AdminCard 
+                icon={Car}
+                title="Identidade Visual"
+                desc="Personalize o sistema com a marca da sua empresa: Logo, Nome, CNPJ e cores."
+                color="#818cf8"
                 onClick={() => setSecaoAdmin('empresa')}
-                interactive
-              >
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: DESIGN.spacing.sm }}>
-                  <Car className="w-10 h-10" style={{ color: DESIGN.colors.primary[600] }} />
-                  <h2 className="text-xl font-bold text-gray-900">Personalização da Empresa</h2>
-                  <p className="text-sm text-gray-600 mt-2">Nome, CNPJ, logo e dados da empresa</p>
-                </div>
-              </Card>
+              />
 
-              {/* Configuração de Ticket */}
-              <Card 
-                variant="primary"
+              <AdminCard 
+                icon={Ticket}
+                title="Layout do Ticket"
+                desc="Customize o comprovante impresso: cabeçalho, rodapé, fontes e mensagens."
+                color="#f472b6"
                 onClick={() => setSecaoAdmin('ticket')}
-                interactive
-              >
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: DESIGN.spacing.sm }}>
-                  <Printer className="w-10 h-10" style={{ color: DESIGN.colors.primary[600] }} />
-                  <h2 className="text-xl font-bold text-gray-900">Configuração de Ticket</h2>
-                  <p className="text-sm text-gray-600 mt-2">Layout, fontes e formatação de impressão</p>
-                </div>
-              </Card>
+              />
 
-              {/* Preços */}
-              <Card 
-                variant="warning"
+              <AdminCard 
+                icon={DollarSign}
+                title="Tabela de Preços"
+                desc="Defina valores por hora, frações, tolerâncias e diárias para cada categoria."
+                color="#fbbf24"
                 onClick={() => setSecaoAdmin('precos')}
-                interactive
-              >
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: DESIGN.spacing.sm }}>
-                  <DollarSign className="w-10 h-10" style={{ color: DESIGN.colors.warning[600] }} />
-                  <h2 className="text-xl font-bold text-gray-900">Configurações de Preço</h2>
-                  <p className="text-sm text-gray-600 mt-2">Valores, frações e tetos de cobrança</p>
-                </div>
-              </Card>
+              />
 
-              {/* Gerenciamento de Registros */}
-              <Card 
-                variant="danger"
+              <AdminCard 
+                icon={Trash2}
+                title="Limpeza de Dados"
+                desc="Ferramentas avançadas para exclusão de registros antigos e manutenção do banco."
+                color="#ef4444"
                 onClick={() => setSecaoAdmin('registros')}
-                interactive
-              >
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: DESIGN.spacing.sm }}>
-                  <Trash2 className="w-10 h-10" style={{ color: DESIGN.colors.danger[600] }} />
-                  <h2 className="text-xl font-bold text-gray-900">Gerenciamento de Registros</h2>
-                  <p className="text-sm text-gray-600 mt-2">Deletar registros por dia, mês ou individual</p>
-                </div>
-              </Card>
+              />
 
-              {/* Controle de Cadastros */}
-              <Card 
-                variant="success"
+              <AdminCard 
+                icon={Users}
+                title="Mensalistas"
+                desc="Aprovação de cadastros, gestão de contratos e controle de acesso de mensalistas."
+                color="#a78bfa"
                 onClick={() => setSecaoAdmin('mensalistas')}
-                interactive
-              >
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: DESIGN.spacing.sm }}>
-                  <Users className="w-10 h-10" style={{ color: DESIGN.colors.success[600] }} />
-                  <h2 className="text-xl font-bold text-gray-900">Controle de Cadastros</h2>
-                  <p className="text-sm text-gray-600 mt-2">Gerenciar solicitações de mensalistas</p>
-                  {pendenciasMensalistas > 0 && (
-                    <Badge variant="danger" size="sm" style={{ marginTop: DESIGN.spacing.sm }}>
-                      {pendenciasMensalistas} pendente(s)
-                    </Badge>
-                  )}
-                </div>
-              </Card>
+                badge={pendenciasMensalistas > 0 ? (
+                  <span className="px-2 py-1 bg-red-500/20 text-red-400 border border-red-500/30 rounded text-xs font-bold animate-pulse">
+                    {pendenciasMensalistas} PENDENTE(S)
+                  </span>
+                ) : null}
+              />
 
-              {/* Controle de Caixa */}
-              <Card 
-                variant={caixaAberto ? "success" : "warning"}
+              <AdminCard 
+                icon={DollarSign}
+                title="Controle de Caixa"
+                desc={caixaAberto ? "Caixa atualmente ABERTO. Clique para fechar ou ver parciais." : "Caixa FECHADO. Clique para iniciar turno."}
+                color={caixaAberto ? "#34d399" : "#fbbf24"}
                 onClick={() => setShowModalControleCaixa(true)}
-                interactive
-              >
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: DESIGN.spacing.sm }}>
-                  <DollarSign className="w-10 h-10" style={{ color: caixaAberto ? DESIGN.colors.success[600] : DESIGN.colors.warning[600] }} />
-                  <h2 className="text-xl font-bold text-gray-900">Controle de Caixa</h2>
-                  <p className="text-sm text-gray-600 mt-2">
-                    {caixaAberto ? '✅ Caixa aberto' : 'Abrir/fechar caixa e gerar prestações'}
-                  </p>
-                </div>
-              </Card>
-            </CardGrid>
+                badge={caixaAberto ? (
+                  <span className="px-2 py-1 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded text-xs font-bold">
+                    CAIXA ABERTO
+                  </span>
+                ) : (
+                    <span className="px-2 py-1 bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded text-xs font-bold">
+                    CAIXA FECHADO
+                  </span>
+                )}
+              />
+            </div>
           </div>
+          {renderModalControleCaixa()}
+          {renderRelatorioFechamento()}
+          {renderToasts()}
+          <ConfirmDialog
+            isOpen={!!confirmDialog}
+            title={confirmDialog?.titulo || ''}
+            message={confirmDialog?.mensagem || ''}
+            variant="danger"
+            confirmText="Confirmar"
+            cancelText="Cancelar"
+            onConfirm={confirmarDialogo}
+            onCancel={cancelarDialogo}
+          />
         </div>
       );
     }
 
     // Renderizar seção específica
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 p-4">
-        <div className="max-w-4xl mx-auto">
+      <div className="min-h-screen bg-[#020617] text-slate-200 p-4 font-sans relative">
+        <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
+             <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-cyan-900/10 rounded-full blur-[120px]" />
+        </div>
+
+        <div className="max-w-6xl mx-auto relative z-10">
           {/* Header da Seção */}
-          <div className="flex items-center justify-between mb-6">
-            <Button 
-              variant="secondary"
-              onClick={() => setSecaoAdmin(null)}
-              style={{ display: 'flex', alignItems: 'center', gap: DESIGN.spacing.sm }}
-            >
-              <Home className="w-5 h-5" />
-              Voltar ao Menu
-            </Button>
+          <div className="flex items-center justify-between mb-8 pt-4">
+             <div className="flex items-center gap-4">
+                <Button 
+                  variant="secondary"
+                  onClick={() => setSecaoAdmin(null)}
+                  style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    width: '40px', 
+                    height: '40px', 
+                    padding: 0,
+                    borderRadius: '12px',
+                    background: 'rgba(30, 41, 59, 0.5)', 
+                    color: 'white', 
+                    border: '1px solid rgba(255,255,255,0.1)' 
+                  }}
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                </Button>
+                <div>
+                   <h2 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
+                      {secaoAdmin === 'operadores' && <><Users className="text-cyan-400"/> Gestão de Operadores</>}
+                      {secaoAdmin === 'patios' && <><Home className="text-emerald-400"/> Gestão de Pátios</>}
+                      {secaoAdmin === 'impressoras' && <><Printer className="text-amber-400"/> Hardware & Impressão</>}
+                      {secaoAdmin === 'empresa' && <><Car className="text-indigo-400"/> Identidade Visual</>}
+                      {secaoAdmin === 'ticket' && <><Ticket className="text-pink-400"/> Layout do Ticket</>}
+                      {secaoAdmin === 'precos' && <><DollarSign className="text-amber-400"/> Tabela de Preços</>}
+                      {secaoAdmin === 'registros' && <><Trash2 className="text-red-400"/> Manutenção de Dados</>}
+                      {secaoAdmin === 'mensalistas' && <><Users className="text-violet-400"/> Mensalistas</>}
+                   </h2>
+                </div>
+             </div>
+
             <Button 
               variant="secondary"
               onClick={() => setTela('home')}
-              style={{ display: 'flex', alignItems: 'center', gap: DESIGN.spacing.sm }}
+              style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '8px', 
+                background: 'rgba(239, 68, 68, 0.1)', 
+                color: '#fca5a5', 
+                border: '1px solid rgba(239, 68, 68, 0.2)' 
+              }}
             >
-              <LogOut className="w-5 h-5" />
-              Sair do Admin
+              <LogOut className="w-4 h-4" />
+              Sair
             </Button>
           </div>
 
           {/* Conteúdo da Seção Selecionada */}
+          <div className="bg-[#1E293B]/40 backdrop-blur-xl rounded-2xl p-8 border border-slate-800 shadow-2xl relative overflow-hidden">
+             
           {secaoAdmin === 'operadores' && (
-            <div className="card mb-6 border-2 border-blue-200">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold flex items-center gap-2 text-blue-900">
-                <Users className="w-6 h-6 text-blue-600" />
-                Gestão de Operadores
-              </h2>
-              <Button
-                variant="secondary"
-                onClick={carregarDadosOperadores}
-                disabled={carregandoOperadores}
-              >
-                {carregandoOperadores ? 'Atualizando...' : 'Atualizar'}
-              </Button>
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-4 mb-5">
-              <div>
-                <label className="block text-sm font-semibold mb-2">Nome do operador (login)</label>
-                <Input
-                  type="text"
-                  value={formOperador.operador}
-                  onChange={(e) => setFormOperador({ ...formOperador, operador: e.target.value })}
-                  placeholder="ex: joao"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold mb-2">Nome completo</label>
-                <Input
-                  type="text"
-                  value={formOperador.nomeCompleto}
-                  onChange={(e) => setFormOperador({ ...formOperador, nomeCompleto: e.target.value })}
-                  placeholder="ex: João da Silva"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold mb-2">Senha inicial</label>
-                <Input
-                  type="password"
-                  value={formOperador.senha}
-                  onChange={(e) => setFormOperador({ ...formOperador, senha: e.target.value })}
-                  placeholder="mínimo 6 caracteres"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold mb-2">Política de acesso</label>
-                <Select
-                  value={formOperador.nivelAcesso}
-                  onChange={(e) => setFormOperador({ ...formOperador, nivelAcesso: e.target.value })}
-                  options={niveisAcessoOptions}
-                />
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', gap: DESIGN.spacing.sm, marginBottom: DESIGN.spacing.lg }}>
-              <Button
-                variant="primary"
-                onClick={criarOperadorAdmin}
-                disabled={salvandoOperador}
-              >
-                {salvandoOperador ? 'Criando operador...' : 'Criar operador'}
-              </Button>
-              <Button
-                variant="secondary"
-                onClick={limparFormularioOperador}
-              >
-                Limpar
-              </Button>
-            </div>
-
-            <div className="space-y-2">
-              <h3 className="font-bold text-gray-800">Operadores cadastrados</h3>
-
-              {carregandoOperadores ? (
-                <Alert type="info" title="Carregando...">
-                  Atualizando listagem de operadores...
-                </Alert>
-              ) : (
-                <Table
-                  columns={[
-                    { key: 'nomeCompleto', label: 'Nome', width: '200px' },
-                    { key: 'email', label: 'E-mail', width: '200px' },
-                    { key: 'nivelAcesso', label: 'Nível de Acesso', width: '140px' },
-                    { key: 'status', label: 'Status', width: '120px', align: 'center' },
-                    { key: 'acao', label: 'Ação', width: '100px', align: 'center' }
-                  ]}
-                  data={operadoresAdminTableData}
-                  striped
-                  hover
-                  emptyState={
-                    <div style={{ textAlign: 'center', padding: `${DESIGN.spacing.lg}px` }}>
-                      <p style={{ color: DESIGN.colors.neutral[500] }}>Nenhum operador ativo encontrado.</p>
-                    </div>
-                  }
-                />
-              )}
-            </div>
-            </div>
+            <GestaoOperadores 
+              carregarDadosOperadores={carregarDadosOperadores}
+              carregandoOperadores={carregandoOperadores}
+              formOperador={formOperador}
+              setFormOperador={setFormOperador}
+              niveisAcessoOptions={niveisAcessoOptions}
+              criarOperadorAdmin={criarOperadorAdmin}
+              salvandoOperador={salvandoOperador}
+              limparFormularioOperador={limparFormularioOperador}
+              operadoresAdminTableData={operadoresAdminTableData}
+            />
           )}
 
-          {/* Seção Pátios */}
           {secaoAdmin === 'patios' && (
-          <div className="card mb-6 border-2 border-green-200">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold flex items-center gap-2 text-green-900">
-                <Home className="w-6 h-6 text-green-600" />
-                Gestão de Pátios
-              </h2>
-              <Button
-                variant="secondary"
-                onClick={carregarPatios}
-                disabled={carregandoPatios}
-              >
-                {carregandoPatios ? 'Atualizando...' : 'Atualizar'}
-              </Button>
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-4 mb-5">
-              <div className="md:col-span-2">
-                <label className="block text-sm font-semibold mb-2">Nome do Pátio *</label>
-                <Input
-                  type="text"
-                  value={formPatio.nome}
-                  onChange={(e) => setFormPatio({ ...formPatio, nome: e.target.value })}
-                  placeholder="ex: Pátio Centro"
-                />
-              </div>
-
-              {/* Seletor de Tipo de Localização */}
-              <div className="md:col-span-2 flex gap-4 p-2 bg-gray-50 rounded-lg border border-gray-200">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="tipoLocalizacao"
-                    value="endereco"
-                    checked={tipoLocalizacao === 'endereco'}
-                    onChange={() => setTipoLocalizacao('endereco')}
-                    className="w-4 h-4 text-blue-600"
-                  />
-                  <span className="text-sm font-medium text-gray-700">📍 Endereço (CEP)</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="tipoLocalizacao"
-                    value="coordenadas"
-                    checked={tipoLocalizacao === 'coordenadas'}
-                    onChange={() => setTipoLocalizacao('coordenadas')}
-                    className="w-4 h-4 text-blue-600"
-                  />
-                  <span className="text-sm font-medium text-gray-700">🌍 Coordenadas (GPS)</span>
-                </label>
-              </div>
-
-              {tipoLocalizacao === 'endereco' ? (
-                <>
-                  <div>
-                    <label className="block text-sm font-semibold mb-2">CEP</label>
-                    <Input
-                      type="text"
-                      value={formPatio.cep}
-                      onChange={(e) => buscarCepAutomatico(e.target.value)}
-                      placeholder="00000-000"
-                      maxLength={9}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold mb-2">Cidade</label>
-                    <Input
-                      type="text"
-                      value={formPatio.cidade}
-                      onChange={(e) => setFormPatio({ ...formPatio, cidade: e.target.value })}
-                      placeholder="ex: São Paulo"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold mb-2">Estado (UF)</label>
-                    <Input
-                      type="text"
-                      value={formPatio.estado}
-                      onChange={(e) => setFormPatio({ ...formPatio, estado: e.target.value.toUpperCase() })}
-                      maxLength="2"
-                      placeholder="ex: SP"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold mb-2">Endereço (Rua/Av)</label>
-                    <Input
-                      type="text"
-                      value={formPatio.endereco}
-                      onChange={(e) => setFormPatio({ ...formPatio, endereco: e.target.value })}
-                      placeholder="ex: Rua Santos"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold mb-2">Número</label>
-                    <Input
-                      type="text"
-                      value={formPatio.numero}
-                      onChange={(e) => setFormPatio({ ...formPatio, numero: e.target.value })}
-                      placeholder="ex: 100"
-                    />
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div>
-                    <label className="block text-sm font-semibold mb-2">Latitude</label>
-                    <Input
-                      type="number"
-                      step="any"
-                      min="-90"
-                      max="90"
-                      value={formPatio.latitude}
-                      onChange={(e) => setFormPatio({ ...formPatio, latitude: e.target.value })}
-                      placeholder="ex: -23.550520"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold mb-2">Longitude</label>
-                    <Input
-                      type="number"
-                      step="any"
-                      min="-180"
-                      max="180"
-                      value={formPatio.longitude}
-                      onChange={(e) => setFormPatio({ ...formPatio, longitude: e.target.value })}
-                      placeholder="ex: -46.633308"
-                    />
-                  </div>
-                  <div className="md:col-span-2 text-xs text-gray-500">
-                    💡 Use coordenadas do Google Maps para maior precisão em locais sem número.
-                  </div>
-                </>
-              )}
-
-              <div>
-                <label className="block text-sm font-semibold mb-2">Quantidade de Vagas</label>
-                <Input
-                  type="number"
-                  value={formPatio.qtd_vagas}
-                  onChange={(e) => setFormPatio({ ...formPatio, qtd_vagas: e.target.value })}
-                  placeholder="ex: 150"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold mb-2">Telefone</label>
-                <Input
-                  type="text"
-                  value={formPatio.telefone}
-                  onChange={(e) => setFormPatio({ ...formPatio, telefone: e.target.value })}
-                  placeholder="ex: (11) 9999-9999"
-                />
-              </div>
-
-              <div className="md:col-span-2">
-                <label className="block text-sm font-semibold mb-2">E-mail</label>
-                <Input
-                  type="email"
-                  value={formPatio.email}
-                  onChange={(e) => setFormPatio({ ...formPatio, email: e.target.value })}
-                  placeholder="ex: contato@patio.com.br"
-                />
-              </div>
-
-              <div className="md:col-span-2">
-                <label className="block text-sm font-semibold mb-2">Descrição</label>
-                <TextArea
-                  value={formPatio.descricao}
-                  onChange={(e) => setFormPatio({ ...formPatio, descricao: e.target.value })}
-                  placeholder="Informações adicionais sobre o pátio..."
-                  rows={3}
-                />
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', gap: DESIGN.spacing.sm, marginBottom: DESIGN.spacing.md }}>
-              <Button
-                variant="primary"
-                fullWidth
-                onClick={criarPatioAdmin}
-                disabled={salvandoPatio}
-              >
-                {salvandoPatio ? 'Salvando...' : '+ Novo Pátio'}
-              </Button>
-
-              <Button
-                variant="secondary"
-                fullWidth
-                onClick={limparFormularioPatio}
-              >
-                Limpar
-              </Button>
-            </div>
-
-            <div className="space-y-2">
-              <h3 className="font-bold text-gray-800">Pátios cadastrados</h3>
-
-              {carregandoPatios ? (
-                <Alert type="info" title="Carregando...">
-                  Atualizando listagem de pátios...
-                </Alert>
-              ) : (
-                <Table
-                  columns={[
-                    { key: 'nome', label: 'Nome do Pátio', width: '200px' },
-                    { key: 'localizacao', label: 'Localização', width: '250px' },
-                    { key: 'vagas', label: 'Vagas', width: '80px', align: 'center' },
-                    { key: 'telefone', label: 'Telefone', width: '140px' },
-                    { key: 'acao', label: 'Ação', width: '100px', align: 'center' }
-                  ]}
-                  data={patiosAdminTableData}
-                  striped
-                  hover
-                  emptyState={
-                    <div style={{ textAlign: 'center', padding: `${DESIGN.spacing.lg}px` }}>
-                      <p style={{ color: DESIGN.colors.neutral[500] }}>Nenhum pátio encontrado. Crie um novo pátio acima.</p>
-                    </div>
-                  }
-                />
-              )}
-            </div>
-          </div>
+            <GestaoPatios 
+              carregarPatios={carregarPatios}
+              carregandoPatios={carregandoPatios}
+              formPatio={formPatio}
+              setFormPatio={setFormPatio}
+              tipoLocalizacao={tipoLocalizacao}
+              setTipoLocalizacao={setTipoLocalizacao}
+              buscarCepAutomatico={buscarCepAutomatico}
+              criarPatioAdmin={criarPatioAdmin}
+              salvandoPatio={salvandoPatio}
+              limparFormularioPatio={limparFormularioPatio}
+              patiosAdminTableData={patiosAdminTableData}
+            />
           )}
 
-          {/* Seção Impressoras (Bluetooth + USB) */}
           {secaoAdmin === 'impressoras' && (
-          <>
-          {/* Configuração de Impressora Bluetooth */}
-          <div className="card mb-6 bg-blue-50 border-2 border-blue-300">
-            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-              <Printer className="w-6 h-6 text-blue-600" />
-              <Bluetooth className="w-6 h-6 text-blue-600" />
-              Impressora Térmica Bluetooth (58mm)
-            </h2>
-            <div className="space-y-4">
-              <div className="bg-white p-4 rounded-lg">
-                <p className="font-semibold text-blue-900 mb-2">Status da Conexão:</p>
-                <div className="flex items-center gap-3">
-                  <div className={`w-4 h-4 rounded-full ${impressoraConectada ? 'bg-green-500 animate-pulse' : 'bg-gray-300'}`}></div>
-                  <span className="font-bold text-lg">
-                    {impressoraConectada ? `✅ Conectado - ${nomeImpressora}` : '❌ Não conectado'}
-                  </span>
-                </div>
-              </div>
-
-              <div className="bg-amber-50 border border-amber-200 p-3 rounded-lg">
-                <p className="text-sm font-semibold text-amber-900 mb-1">📋 Instruções para Conectar:</p>
-                <ol className="text-sm text-amber-900 space-y-1 list-decimal list-inside">
-                  <li>Certifique-se que a impressora está ligada</li>
-                  <li>Ative Bluetooth no seu computador/tablet</li>
-                  <li>Clique em "Conectar Impressora" na tela principal</li>
-                  <li>Selecione sua impressora térmica na caixa de diálogo</li>
-                  <li>Após conectar, os botões de imprimir aparecerão automaticamente</li>
-                </ol>
-              </div>
-
-              <div className="flex gap-2">
-                {impressoraConectada ? (
-                  <>
-                    <button
-                      onClick={desconectarImpressora}
-                      className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-lg transition-all active:scale-95 flex items-center justify-center gap-2"
-                    >
-                      <Bluetooth className="w-5 h-5" />
-                      Desconectar
-                    </button>
-                    <button
-                      onClick={() => imprimirEntrada({ 
-                        id: Date.now(), 
-                        placa: 'TESTE-01', 
-                        modelo: 'Teste Modelo',
-                        cor: 'Preto',
-                        entrada: Date.now()
-                      })}
-                      className="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-4 rounded-lg transition-all active:scale-95 flex items-center justify-center gap-2"
-                    >
-                      <Printer className="w-5 h-5" />
-                      Teste de Impressão
-                    </button>
-                    <button
-                      onClick={testarAlinhamento}
-                      className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition-all active:scale-95 flex items-center justify-center gap-2"
-                    >
-                      <AlertTriangle className="w-5 h-5" />
-                      Teste de Alinhamento
-                    </button>
-                  </>
-                ) : (
-                  <button
-                    onClick={conectarImpressora}
-                    className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition-all active:scale-95 flex items-center justify-center gap-2"
-                  >
-                    <Bluetooth className="w-5 h-5" />
-                    Conectar Impressora
-                  </button>
-                )}
-              </div>
-
-              <div className="bg-blue-50 p-3 rounded-lg text-sm text-blue-900 border border-blue-200">
-                <p className="font-semibold mb-1">💡 Compatibilidade:</p>
-                <p>Impressoras térmicas padrão ESC/POS com Bluetooth (58mm): Elgin, Sweda, Bematech, Zebra série ZQ, etc.</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Configuração de Impressora USB / Serial */}
-          <div className="card mb-6 bg-purple-50 border-2 border-purple-300">
-            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-              <Printer className="w-6 h-6 text-purple-600" />
-              <AlertTriangle className="w-6 h-6 text-purple-600" />
-              Impressora Térmica USB / Serial (58mm)
-            </h2>
-            <div className="space-y-4">
-              <div className="bg-white p-4 rounded-lg">
-                <p className="font-semibold text-purple-900 mb-2">Status da Conexão:</p>
-                <div className="flex items-center gap-3">
-                  <div className={`w-4 h-4 rounded-full ${impressoraUSBConectada ? 'bg-green-500 animate-pulse' : 'bg-gray-300'}`}></div>
-                  <span className="font-bold text-lg">
-                    {impressoraUSBConectada ? `✅ Conectado - ${nomeImpressoraUSB}` : '❌ Não conectado'}
-                  </span>
-                </div>
-              </div>
-
-              <div className="bg-amber-50 border border-amber-200 p-3 rounded-lg">
-                <p className="text-sm font-semibold text-amber-900 mb-1">📋 Instruções para Conectar:</p>
-                <ol className="text-sm text-amber-900 space-y-1 list-decimal list-inside">
-                  <li>Conecte a impressora no cabo USB</li>
-                  <li>Clique em "Conectar" para tentar Web USB</li>
-                  <li>Se USB falhar, clique novamente em "Tentar Serial"</li>
-                  <li>Selecione a porta no diálogo do navegador</li>
-                  <li>Após conectar, a impressão funciona automaticamente na entrada e saída</li>
-                </ol>
-              </div>
-
-              <div className="flex gap-2">
-                {impressoraUSBConectada ? (
-                  <>
-                    <button
-                      onClick={desconectarImpressoraUSB}
-                      className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-lg transition-all active:scale-95 flex items-center justify-center gap-2"
-                    >
-                      <AlertTriangle className="w-5 h-5" />
-                      Desconectar
-                    </button>
-                    <button
-                      onClick={() => imprimirEntrada({
-                        id: Date.now(),
-                        placa: 'TESTE-01',
-                        modelo: 'Teste Modelo',
-                        cor: 'Preto',
-                        entrada: Date.now()
-                      })}
-                      className="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-4 rounded-lg transition-all active:scale-95 flex items-center justify-center gap-2"
-                    >
-                      <Printer className="w-5 h-5" />
-                      Teste de Impressão
-                    </button>
-                  </>
-                ) : (
-                  <button
-                    onClick={conectarImpressoraUSB}
-                    className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-4 rounded-lg transition-all active:scale-95 flex items-center justify-center gap-2"
-                  >
-                    <AlertTriangle className="w-5 h-5" />
-                    {tentarSerialNoProximoClique ? 'Tentar Serial' : 'Conectar'}
-                  </button>
-                )}
-              </div>
-
-              <div className="bg-purple-50 p-3 rounded-lg text-sm text-purple-900 border border-purple-200">
-                <p className="font-semibold mb-1">💡 Compatibilidade:</p>
-                <p>Impressoras térmicas ESC/POS por USB direto e adaptadores USB-Serial compatíveis com Web Serial.</p>
-              </div>
-            </div>
-          </div>
-          </>
+            <GestaoImpressoras 
+              impressoraConectada={impressoraConectada}
+              nomeImpressora={nomeImpressora}
+              desconectarImpressora={desconectarImpressora}
+              conectarImpressora={conectarImpressora}
+              imprimirEntrada={imprimirEntrada}
+              testarAlinhamento={testarAlinhamento}
+              impressoraUSBConectada={impressoraUSBConectada}
+              nomeImpressoraUSB={nomeImpressoraUSB}
+              desconectarImpressoraUSB={desconectarImpressoraUSB}
+              conectarImpressoraUSB={conectarImpressoraUSB}
+              tentarSerialNoProximoClique={tentarSerialNoProximoClique}
+            />
           )}
 
-          {/* Seção Personalização da Empresa */}
           {secaoAdmin === 'empresa' && (
-          <div className="card mb-6">
-            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-              <Car className="w-6 h-6 text-purple-600" />
-              Personalização da Empresa
-            </h2>
-            <div className="space-y-4">
-              <div>
-                <Input
-                  type="text"
-                  label="Nome da Empresa / Estacionamento"
-                  value={config.nomeEmpresa}
-                  onChange={(e) => setConfig({...config, nomeEmpresa: e.target.value})}
-                  placeholder="ex: Inteligente Park, Estacionamento Central"
-                />
-              </div>
-
-              <div>
-                <Input
-                  type="text"
-                  label="CNPJ"
-                  value={config.cnpj || ''}
-                  onChange={(e) => setConfig({...config, cnpj: e.target.value})}
-                  placeholder="00.000.000/0001-00"
-                />
-              </div>
-
-              <div>
-                <Input
-                  type="text"
-                  label="Endereço"
-                  value={config.endereco || ''}
-                  onChange={(e) => setConfig({...config, endereco: e.target.value})}
-                  placeholder="Rua, número, bairro, cidade"
-                />
-              </div>
-
-              <div>
-                <Input
-                  type="text"
-                  label="Telefone"
-                  value={config.telefone || ''}
-                  onChange={(e) => setConfig({...config, telefone: e.target.value})}
-                  placeholder="(11) 99999-9999"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-semibold mb-2">
-                  📸 Logo da Empresa
-                </label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleLogoUpload}
-                  className="block w-full text-sm text-gray-500
-                    file:mr-4 file:py-2 file:px-4
-                    file:rounded-lg file:border-0
-                    file:text-sm file:font-semibold
-                    file:bg-blue-600 file:text-white
-                    hover:file:bg-blue-700
-                    cursor-pointer mb-3"
-                />
-                <p className="text-sm text-gray-600 mb-3">
-                  Formatos suportados: PNG, JPG, JPEG. Tamanho máximo: 2MB
-                </p>
-                
-                {config.logoUrl && (
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <div className="flex flex-col items-center gap-3">
-                      <div>
-                        <p className="text-sm text-gray-600 mb-2 text-center">Prévia da Logo:</p>
-                        <img 
-                          src={config.logoUrl} 
-                          alt="Logo Preview" 
-                          className="max-w-32 max-h-32 object-contain rounded-lg shadow-md"
-                        />
-                      </div>
-                      <Button
-                        variant="danger"
-                        fullWidth
-                        size="sm"
-                        onClick={removerLogo}
-                      >
-                        🗑️ Remover Logo
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </div>
-              
-              <div className="bg-blue-50 p-3 rounded-lg text-sm text-gray-700">
-                <p className="font-semibold mb-1">💡 Dica:</p>
-                <p>Selecione uma imagem do seu computador. Recomendado: Logo quadrada com até 500x500px, em PNG ou JPG</p>
-              </div>
-            </div>
-          </div>
+            <IdentidadeVisual 
+              config={config}
+              setConfig={setConfig}
+              formatarCNPJ={formatarCNPJ}
+              handleLogoUpload={handleLogoUpload}
+              removerLogo={removerLogo}
+            />
           )}
 
-          {/* Seção Configuração de Ticket */}
           {secaoAdmin === 'ticket' && (
-          <div className="card mb-6 bg-gradient-to-br from-blue-50 to-slate-50 border-2 border-blue-300">
-            <h2 className="text-xl font-bold mb-4 flex items-center gap-2 text-blue-900">
-              <Printer className="w-6 h-6 text-blue-600" />
-              ⚙️ Configuração Completa de Impressão do Ticket
-            </h2>
-
-            <div className="space-y-6">
-              {/* SEÇÃO 1: TAMANHO DO QR CODE */}
-              <div className="bg-white p-4 rounded-lg border border-blue-200">
-                <h3 className="font-bold text-sm text-blue-900 mb-3">📋 TAMANHO DO QR CODE</h3>
-                <div>
-                  <label className="block text-sm font-semibold mb-2">
-                    Tamanho ({config.tamanhoQrCode || 150}px)
-                  </label>
-                  <input
-                    type="range"
-                    min="80"
-                    max="200"
-                    step="10"
-                    value={config.tamanhoQrCode || 150}
-                    onChange={(e) => setConfig({...config, tamanhoQrCode: parseInt(e.target.value)})}
-                    className="w-full"
-                  />
-                  <div className="text-xs text-slate-500 mt-1">Intervalo: 80px a 200px</div>
-                </div>
-              </div>
-
-              {/* SEÇÃO 2: DIMENSÕES DO TICKET */}
-              <div className="bg-white p-4 rounded-lg border border-blue-200">
-                <h3 className="font-bold text-sm text-blue-900 mb-3">📐 DIMENSÕES DO TICKET</h3>
-                <div className="space-y-3">
-                  <div>
-                    <label className="block text-sm font-semibold mb-2">
-                      Largura em caracteres ({config.larguraTicket || 32} chars)
-                    </label>
-                    <input
-                      type="range"
-                      min="20"
-                      max="40"
-                      value={config.larguraTicket || 32}
-                      onChange={(e) => setConfig({...config, larguraTicket: parseInt(e.target.value)})}
-                      className="w-full"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold mb-2">
-                      Linha divisória ({config.linhaDivisoria || 24} caracteres)
-                    </label>
-                    <input
-                      type="range"
-                      min="16"
-                      max="32"
-                      value={config.linhaDivisoria || 24}
-                      onChange={(e) => setConfig({...config, linhaDivisoria: parseInt(e.target.value)})}
-                      className="w-full"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* SEÇÃO 3: TAMANHO DAS FONTES */}
-              <div className="bg-white p-4 rounded-lg border border-blue-200">
-                <h3 className="font-bold text-sm text-blue-900 mb-3">🔤 TAMANHO DAS FONTES</h3>
-                <div className="space-y-4">
-                  {/* Nome da Empresa */}
-                  <div className="border-b pb-3">
-                    <label className="block text-sm font-semibold mb-2">Nome da Empresa</label>
-                    <div className="flex gap-4">
-                      <div className="flex-1">
-                        <label className="block text-xs text-slate-600 mb-1">Altura: {config.tamanhoFonteNome?.altura || 1}x</label>
-                        <input
-                          type="range"
-                          min="1"
-                          max="3"
-                          value={config.tamanhoFonteNome?.altura || 1}
-                          onChange={(e) => setConfig({
-                            ...config,
-                            tamanhoFonteNome: {...config.tamanhoFonteNome, altura: parseInt(e.target.value)}
-                          })}
-                          className="w-full"
-                        />
-                      </div>
-                      <div className="flex-1">
-                        <label className="block text-xs text-slate-600 mb-1">Largura: {config.tamanhoFonteNome?.largura || 1}x</label>
-                        <input
-                          type="range"
-                          min="1"
-                          max="3"
-                          value={config.tamanhoFonteNome?.largura || 1}
-                          onChange={(e) => setConfig({
-                            ...config,
-                            tamanhoFonteNome: {...config.tamanhoFonteNome, largura: parseInt(e.target.value)}
-                          })}
-                          className="w-full"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Dados */}
-                  <div className="border-b pb-3">
-                    <label className="block text-sm font-semibold mb-2">Dados Gerais (CNPJ, Endereço, etc)</label>
-                    <div className="flex gap-4">
-                      <div className="flex-1">
-                        <label className="block text-xs text-slate-600 mb-1">Altura: {config.tamanhoFonteDados?.altura || 1}x</label>
-                        <input
-                          type="range"
-                          min="1"
-                          max="2"
-                          value={config.tamanhoFonteDados?.altura || 1}
-                          onChange={(e) => setConfig({
-                            ...config,
-                            tamanhoFonteDados: {...config.tamanhoFonteDados, altura: parseInt(e.target.value)}
-                          })}
-                          className="w-full"
-                        />
-                      </div>
-                      <div className="flex-1">
-                        <label className="block text-xs text-slate-600 mb-1">Largura: {config.tamanhoFonteDados?.largura || 1}x</label>
-                        <input
-                          type="range"
-                          min="1"
-                          max="2"
-                          value={config.tamanhoFonteDados?.largura || 1}
-                          onChange={(e) => setConfig({
-                            ...config,
-                            tamanhoFonteDados: {...config.tamanhoFonteDados, largura: parseInt(e.target.value)}
-                          })}
-                          className="w-full"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Placa */}
-                  <div className="border-b pb-3">
-                    <label className="block text-sm font-semibold mb-2">Placa do Veículo</label>
-                    <div className="flex gap-4">
-                      <div className="flex-1">
-                        <label className="block text-xs text-slate-600 mb-1">Altura: {config.tamanhoFontePlaca?.altura || 2}x</label>
-                        <input
-                          type="range"
-                          min="1"
-                          max="4"
-                          value={config.tamanhoFontePlaca?.altura || 2}
-                          onChange={(e) => setConfig({
-                            ...config,
-                            tamanhoFontePlaca: {...config.tamanhoFontePlaca, altura: parseInt(e.target.value)}
-                          })}
-                          className="w-full"
-                        />
-                      </div>
-                      <div className="flex-1">
-                        <label className="block text-xs text-slate-600 mb-1">Largura: {config.tamanhoFontePlaca?.largura || 2}x</label>
-                        <input
-                          type="range"
-                          min="1"
-                          max="4"
-                          value={config.tamanhoFontePlaca?.largura || 2}
-                          onChange={(e) => setConfig({
-                            ...config,
-                            tamanhoFontePlaca: {...config.tamanhoFontePlaca, largura: parseInt(e.target.value)}
-                          })}
-                          className="w-full"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Valor */}
-                  <div>
-                    <label className="block text-sm font-semibold mb-2">Valor (R$)</label>
-                    <div className="flex gap-4">
-                      <div className="flex-1">
-                        <label className="block text-xs text-slate-600 mb-1">Altura: {config.tamanhoFonteValor?.altura || 2}x</label>
-                        <input
-                          type="range"
-                          min="1"
-                          max="4"
-                          value={config.tamanhoFonteValor?.altura || 2}
-                          onChange={(e) => setConfig({
-                            ...config,
-                            tamanhoFonteValor: {...config.tamanhoFonteValor, altura: parseInt(e.target.value)}
-                          })}
-                          className="w-full"
-                        />
-                      </div>
-                      <div className="flex-1">
-                        <label className="block text-xs text-slate-600 mb-1">Largura: {config.tamanhoFonteValor?.largura || 2}x</label>
-                        <input
-                          type="range"
-                          min="1"
-                          max="4"
-                          value={config.tamanhoFonteValor?.largura || 2}
-                          onChange={(e) => setConfig({
-                            ...config,
-                            tamanhoFonteValor: {...config.tamanhoFonteValor, largura: parseInt(e.target.value)}
-                          })}
-                          className="w-full"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* SEÇÃO 4: ESPAÇAMENTO */}
-              <div className="bg-white p-4 rounded-lg border border-blue-200">
-                <h3 className="font-bold text-sm text-blue-900 mb-3">↔️ ESPAÇAMENTO (LINHAS VAZIAS)</h3>
-                <div className="space-y-3">
-                  <div>
-                    <label className="block text-sm font-semibold mb-2">
-                      Antes da Divisória ({config.linhasAntesDivisoria || 0} linhas)
-                    </label>
-                    <input
-                      type="range"
-                      min="0"
-                      max="5"
-                      value={config.linhasAntesDivisoria || 0}
-                      onChange={(e) => setConfig({...config, linhasAntesDivisoria: parseInt(e.target.value)})}
-                      className="w-full"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold mb-2">
-                      Depois da Divisória ({config.linhasDepoisDivisoria || 0} linhas)
-                    </label>
-                    <input
-                      type="range"
-                      min="0"
-                      max="5"
-                      value={config.linhasDepoisDivisoria || 0}
-                      onChange={(e) => setConfig({...config, linhasDepoisDivisoria: parseInt(e.target.value)})}
-                      className="w-full"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold mb-2">
-                      Antes do QR Code ({config.linhasAntesQR || 0} linhas)
-                    </label>
-                    <input
-                      type="range"
-                      min="0"
-                      max="5"
-                      value={config.linhasAntesQR || 0}
-                      onChange={(e) => setConfig({...config, linhasAntesQR: parseInt(e.target.value)})}
-                      className="w-full"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold mb-2">
-                      Depois do QR Code ({config.linhasDepoisQR || 1} linhas)
-                    </label>
-                    <input
-                      type="range"
-                      min="0"
-                      max="5"
-                      value={config.linhasDepoisQR || 1}
-                      onChange={(e) => setConfig({...config, linhasDepoisQR: parseInt(e.target.value)})}
-                      className="w-full"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* SEÇÃO 5: VISIBILIDADE DE CAMPOS */}
-              <div className="bg-white p-4 rounded-lg border border-blue-200">
-                <h3 className="font-bold text-sm text-blue-900 mb-3">👁️ VISIBILIDADE DE CAMPOS</h3>
-                <div className="space-y-2">
-                  <label className="flex items-center gap-2 text-sm font-medium">
-                    <input
-                      type="checkbox"
-                      checked={Boolean(config.mostrarModelo)}
-                      onChange={(e) => setConfig({...config, mostrarModelo: e.target.checked})}
-                    />
-                    Modelo do Veículo
-                  </label>
-                  <label className="flex items-center gap-2 text-sm font-medium">
-                    <input
-                      type="checkbox"
-                      checked={Boolean(config.mostrarCor)}
-                      onChange={(e) => setConfig({...config, mostrarCor: e.target.checked})}
-                    />
-                    Cor do Veículo
-                  </label>
-                  <label className="flex items-center gap-2 text-sm font-medium">
-                    <input
-                      type="checkbox"
-                      checked={Boolean(config.mostrarDatas)}
-                      onChange={(e) => setConfig({...config, mostrarDatas: e.target.checked})}
-                    />
-                    Data
-                  </label>
-                  <label className="flex items-center gap-2 text-sm font-medium">
-                    <input
-                      type="checkbox"
-                      checked={Boolean(config.mostrarHoras)}
-                      onChange={(e) => setConfig({...config, mostrarHoras: e.target.checked})}
-                    />
-                    Horas
-                  </label>
-                  <div className="mt-3 border-t pt-3">
-                    <label className="block text-sm font-semibold mb-3">Dados da Empresa no Recibo:</label>
-                    <div className="space-y-2">
-                      <label className="flex items-center gap-2 text-sm font-medium">
-                        <input
-                          type="checkbox"
-                          checked={Boolean(config.imprimirCnpj)}
-                          onChange={(e) => setConfig({...config, imprimirCnpj: e.target.checked})}
-                        />
-                        CNPJ
-                      </label>
-                      <label className="flex items-center gap-2 text-sm font-medium">
-                        <input
-                          type="checkbox"
-                          checked={Boolean(config.imprimirEndereco)}
-                          onChange={(e) => setConfig({...config, imprimirEndereco: e.target.checked})}
-                        />
-                        Endereço
-                      </label>
-                      <label className="flex items-center gap-2 text-sm font-medium">
-                        <input
-                          type="checkbox"
-                          checked={Boolean(config.imprimirTelefone)}
-                          onChange={(e) => setConfig({...config, imprimirTelefone: e.target.checked})}
-                        />
-                        Telefone
-                      </label>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* SEÇÃO 6: ALINHAMENTOS */}
-              <div className="bg-white p-4 rounded-lg border border-blue-200">
-                <h3 className="font-bold text-sm text-blue-900 mb-3">⬅️➡️ ALINHAMENTO DOS TEXTOS</h3>
-                <div className="space-y-4">
-                  {/* Nome da Empresa */}
-                  <div className="border-b pb-3">
-                    <label className="block text-sm font-semibold mb-2">Nome da Empresa</label>
-                    <select
-                      value={config.alinhamentoNome || 'center'}
-                      onChange={(e) => setConfig({...config, alinhamentoNome: e.target.value})}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
-                    >
-                      <option value="left">⬅️ Esquerda</option>
-                      <option value="center">⬆️⬇️ Centralizado</option>
-                      <option value="right">➡️ Direita</option>
-                    </select>
-                  </div>
-
-                  {/* CNPJ, Endereço, Telefone */}
-                  <div className="border-b pb-3">
-                    <label className="block text-sm font-semibold mb-2">Dados da Empresa (CNPJ, Endereço, Telefone)</label>
-                    <select
-                      value={config.alinhamentoDados || 'center'}
-                      onChange={(e) => setConfig({...config, alinhamentoDados: e.target.value})}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
-                    >
-                      <option value="left">⬅️ Esquerda</option>
-                      <option value="center">⬆️⬇️ Centralizado</option>
-                      <option value="right">➡️ Direita</option>
-                    </select>
-                  </div>
-
-                  {/* Linha Divisória */}
-                  <div className="border-b pb-3">
-                    <label className="block text-sm font-semibold mb-2">Linha Divisória</label>
-                    <select
-                      value={config.alinhamentoDivisoria || 'center'}
-                      onChange={(e) => setConfig({...config, alinhamentoDivisoria: e.target.value})}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
-                    >
-                      <option value="left">⬅️ Esquerda</option>
-                      <option value="center">⬆️⬇️ Centralizado</option>
-                      <option value="right">➡️ Direita</option>
-                    </select>
-                  </div>
-
-                  {/* Placa */}
-                  <div className="border-b pb-3">
-                    <label className="block text-sm font-semibold mb-2">Placa do Veículo</label>
-                    <select
-                      value={config.alinhamentoPlaca || 'center'}
-                      onChange={(e) => setConfig({...config, alinhamentoPlaca: e.target.value})}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
-                    >
-                      <option value="left">⬅️ Esquerda</option>
-                      <option value="center">⬆️⬇️ Centralizado</option>
-                      <option value="right">➡️ Direita</option>
-                    </select>
-                  </div>
-
-                  {/* Datas e Horas */}
-                  <div className="border-b pb-3">
-                    <label className="block text-sm font-semibold mb-2">Data, Hora e Informações</label>
-                    <select
-                      value={config.alinhamentoDatas || 'center'}
-                      onChange={(e) => setConfig({...config, alinhamentoDatas: e.target.value})}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
-                    >
-                      <option value="left">⬅️ Esquerda</option>
-                      <option value="center">⬆️⬇️ Centralizado</option>
-                      <option value="right">➡️ Direita</option>
-                    </select>
-                  </div>
-
-                  {/* Modelo e Cor */}
-                  <div className="border-b pb-3">
-                    <label className="block text-sm font-semibold mb-2">Modelo e Cor do Veículo</label>
-                    <select
-                      value={config.alinhamentoModeloCor || 'center'}
-                      onChange={(e) => setConfig({...config, alinhamentoModeloCor: e.target.value})}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
-                    >
-                      <option value="left">⬅️ Esquerda</option>
-                      <option value="center">⬆️⬇️ Centralizado</option>
-                      <option value="right">➡️ Direita</option>
-                    </select>
-                  </div>
-
-                  {/* Valor e Tempo */}
-                  <div>
-                    <label className="block text-sm font-semibold mb-2">Valor (R$) e Tempo</label>
-                    <select
-                      value={config.alinhamentoValor || 'center'}
-                      onChange={(e) => setConfig({...config, alinhamentoValor: e.target.value})}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
-                    >
-                      <option value="left">⬅️ Esquerda</option>
-                      <option value="center">⬆️⬇️ Centralizado</option>
-                      <option value="right">➡️ Direita</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              {/* RESUMO */}
-              <div className="bg-blue-100 p-4 rounded-lg border border-blue-300">
-                <p className="text-sm text-blue-900">
-                  ✅ <strong>Todas as configurações são salvas automaticamente!</strong> Teste com um veículo na tela inicial para ver as mudanças.
-                </p>
-              </div>
-            </div>
-          </div>
+            <LayoutTicket 
+              config={config}
+              setConfig={setConfig}
+            />
           )}
 
-          {/* Seção Configurações de Preço */}
           {secaoAdmin === 'precos' && (
-          <div className="space-y-6">
-            
-            {/* SEÇÃO 1: PREÇOS POR FRAÇÃO */}
-            <div className="card mb-6">
-              <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                <DollarSign className="w-6 h-6 text-green-600" />
-                Preços por Fração de Tempo
-              </h2>
-              <div className="space-y-4">
-                <div>
-                  <Input
-                    type="number"
-                    label="Tempo da Fração (minutos)"
-                    value={config.tempoFracao}
-                    onChange={(e) => setConfig({...config, tempoFracao: parseInt(e.target.value)})}
-                    min="1"
-                  />
-                </div>
-                <div>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    label="Valor da Fração (R$)"
-                    value={config.valorFracao}
-                    onChange={(e) => setConfig({...config, valorFracao: parseFloat(e.target.value)})}
-                    min="0"
-                  />
-                </div>
-                <div>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    label="Valor do Teto/Diária (R$)"
-                    value={config.valorTeto}
-                    onChange={(e) => setConfig({...config, valorTeto: parseFloat(e.target.value)})}
-                    min="0"
-                  />
-                </div>
-                <div>
-                  <Input
-                    type="number"
-                    label="Ciclo do Teto (horas)"
-                    value={config.cicloTeto / 60}
-                    onChange={(e) => setConfig({...config, cicloTeto: parseInt(e.target.value) * 60})}
-                    min="1"
-                  />
-                </div>
-
-                {/* Divisor */}
-                <div className="border-t-2 border-gray-300 py-2">
-                  <p className="text-center font-bold text-gray-600">VALORES PARA MOTO (50% do carro)</p>
-                </div>
-
-                <div>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    label="Valor da Fração Moto (R$) 🏍️"
-                    value={config.valorFracaoMoto}
-                    onChange={(e) => setConfig({...config, valorFracaoMoto: parseFloat(e.target.value)})}
-                    min="0"
-                  />
-                </div>
-                <div>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    label="Valor do Teto Moto (R$) 🏍️"
-                    value={config.valorTetoMoto}
-                    onChange={(e) => setConfig({...config, valorTetoMoto: parseFloat(e.target.value)})}
-                    min="0"
-                  />
-                </div>
-
-                <div className="bg-blue-100 p-4 rounded-lg border border-blue-300">
-                  <p className="text-sm text-blue-900">
-                    ✅ <strong>Salvo automaticamente!</strong> Configure os preços de fração e teto para veículos regulares.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* SEÇÃO 2: TIPOS DE ESTACIONÁVEIS */}
-            <div className="card mb-6 border-2 border-purple-200">
-              <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                <Car className="w-6 h-6 text-purple-600" />
-                Tipos de Estacionáveis
-              </h2>
-
-              <div className="space-y-4 mb-6">
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div>
-                    <Input
-                      type="text"
-                      label="Nome do Tipo"
-                      value={formTipoEstacionavel.nome}
-                      onChange={(e) => setFormTipoEstacionavel({...formTipoEstacionavel, nome: e.target.value})}
-                      placeholder="ex: Bicicleta, Van, Barraca..."
-                    />
-                  </div>
-                  <div>
-                    <Input
-                      type="text"
-                      label="Descrição"
-                      value={formTipoEstacionavel.descricao}
-                      onChange={(e) => setFormTipoEstacionavel({...formTipoEstacionavel, descricao: e.target.value})}
-                      placeholder="ex: Bicicleta elétrica..."
-                    />
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', gap: DESIGN.spacing.sm }}>
-                  <Button
-                    variant="primary"
-                    onClick={adicionarTipoEstacionavel}
-                    disabled={salvandoTipo}
-                  >
-                    {editandoTipo ? 'Atualizar Tipo' : 'Adicionar Tipo'}
-                  </Button>
-                  {editandoTipo && (
-                    <Button
-                      variant="secondary"
-                      onClick={() => {
-                        setEditandoTipo(null);
-                        setFormTipoEstacionavel({ nome: '', descricao: '' });
-                      }}
-                    >
-                      Cancelar
-                    </Button>
-                  )}
-                </div>
-              </div>
-
-              <h3 className="font-bold text-gray-800 mb-3">Tipos Cadastrados</h3>
-              <div className="space-y-2">
-                {tiposEstacionaveis.length === 0 ? (
-                  <p className="text-sm text-gray-600">Nenhum tipo cadastrado.</p>
-                ) : (
-                  tiposEstacionaveis.map((tipo) => (
-                    <div
-                      key={tipo.id}
-                      className={`border rounded-lg p-3 flex items-center justify-between ${
-                        tipo.ativo ? 'bg-purple-50 border-purple-300' : 'bg-gray-100 border-gray-300 opacity-60'
-                      }`}
-                    >
-                      <div>
-                        <p className="font-semibold text-gray-900">
-                          {tipo.nome}
-                          {!tipo.ativo && <span className="ml-2 text-gray-600 text-xs">(INATIVO)</span>}
-                        </p>
-                        {tipo.descricao && <p className="text-sm text-gray-600">{tipo.descricao}</p>}
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => ativarDesativarTipo(tipo.id)}
-                          className={`px-3 py-2 rounded-lg text-sm font-semibold transition-all ${
-                            tipo.ativo
-                              ? 'bg-green-500 hover:bg-green-600 text-white'
-                              : 'bg-gray-400 hover:bg-gray-500 text-white'
-                          }`}
-                          title={tipo.ativo ? 'Desativar' : 'Ativar'}
-                        >
-                          {tipo.ativo ? '✓' : '○'}
-                        </button>
-
-                        <button
-                          onClick={() => {
-                            setEditandoTipo(tipo);
-                            setFormTipoEstacionavel({ nome: tipo.nome, descricao: tipo.descricao });
-                          }}
-                          className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-semibold flex items-center gap-2"
-                        >
-                          ✎
-                        </button>
-
-                        <button
-                          onClick={() => removerTipoEstacionavel(tipo.id)}
-                          className="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg text-sm font-semibold"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-
-            {/* SEÇÃO 3: PREÇOS MENSALISTAS */}
-            <div className="card mb-6 border-2 border-orange-200">
-              <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                <DollarSign className="w-6 h-6 text-orange-600" />
-                Preços Mensalistas por Tipo
-              </h2>
-
-              <div className="space-y-4 mb-6">
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div>
-                    <Select
-                      label="Tipo de Estacionável"
-                      value={formPrecoMensalista.tipoEstacionavelId}
-                      onChange={(e) => setFormPrecoMensalista({...formPrecoMensalista, tipoEstacionavelId: e.target.value})}
-                      options={[
-                        { value: '', label: 'Selecione um tipo...' },
-                        ...tiposEstacionaveis.filter(t => t.ativo).map((tipo) => ({
-                          value: tipo.id,
-                          label: `${tipo.nome}${tipo.descricao ? ` (${tipo.descricao})` : ''}`
-                        }))
-                      ]}
-                    />
-                  </div>
-                  <div>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      label="Valor Mensal (R$)"
-                      value={formPrecoMensalista.valorMensal}
-                      onChange={(e) => setFormPrecoMensalista({...formPrecoMensalista, valorMensal: e.target.value})}
-                      placeholder="ex: 100.00"
-                      min="0"
-                    />
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', gap: DESIGN.spacing.sm }}>
-                  <Button
-                    variant="primary"
-                    onClick={adicionarPrecoMensalista}
-                    disabled={salvandoPreco}
-                  >
-                    {editandoPreco ? 'Atualizar Preço' : 'Adicionar Preço'}
-                  </Button>
-                  {editandoPreco && (
-                    <Button
-                      variant="secondary"
-                      onClick={() => {
-                        setEditandoPreco(null);
-                        setFormPrecoMensalista({ tipoEstacionavelId: '', valorMensal: '' });
-                      }}
-                    >
-                      Cancelar
-                    </Button>
-                  )}
-                </div>
-              </div>
-
-              <h3 className="font-bold text-gray-800 mb-3">Preços Cadastrados</h3>
-              <div className="space-y-2">
-                {precosMensalistas.length === 0 ? (
-                  <p className="text-sm text-gray-600">Nenhum preço de mensalista cadastrado.</p>
-                ) : (
-                  precosMensalistas.map((preco) => (
-                    <div
-                      key={preco.id}
-                      className="bg-orange-50 border border-orange-200 rounded-lg p-3 flex items-center justify-between"
-                    >
-                      <div>
-                        <p className="font-semibold text-gray-900">{obterNomeTipo(preco.tipoEstacionavelId)}</p>
-                        <p className="text-sm text-gray-600">Valor mensal: <strong>R$ {preco.valorMensal.toFixed(2)}</strong></p>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => {
-                            setEditandoPreco(preco);
-                            setFormPrecoMensalista({
-                              tipoEstacionavelId: preco.tipoEstacionavelId.toString(),
-                              valorMensal: preco.valorMensal.toString()
-                            });
-                          }}
-                          className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-semibold flex items-center gap-2"
-                        >
-                          ✎
-                        </button>
-
-                        <button
-                          onClick={() => removerPrecoMensalista(preco.id)}
-                          className="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg text-sm font-semibold"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-
-              <div className="bg-orange-100 p-4 rounded-lg border border-orange-300 mt-4">
-                <p className="text-sm text-orange-900">
-                  ✅ <strong>Salvo automaticamente!</strong> Configure os preços mensalistas para cada tipo de estacionável.
-                </p>
-              </div>
-            </div>
-
-          </div>
+            <TabelaPrecos 
+              config={config}
+              setConfig={setConfig}
+              formTipoEstacionavel={formTipoEstacionavel}
+              setFormTipoEstacionavel={setFormTipoEstacionavel}
+              adicionarTipoEstacionavel={adicionarTipoEstacionavel}
+              salvandoTipo={salvandoTipo}
+              editandoTipo={editandoTipo}
+              setEditandoTipo={setEditandoTipo}
+              tiposEstacionaveis={tiposEstacionaveis}
+              ativarDesativarTipo={ativarDesativarTipo}
+              removerTipoEstacionavel={removerTipoEstacionavel}
+              formPrecoMensalista={formPrecoMensalista}
+              setFormPrecoMensalista={setFormPrecoMensalista}
+              adicionarPrecoMensalista={adicionarPrecoMensalista}
+              salvandoPreco={salvandoPreco}
+              editandoPreco={editandoPreco}
+              setEditandoPreco={setEditandoPreco}
+              precosMensalistas={precosMensalistas}
+              obterNomeTipo={obterNomeTipo}
+              removerPrecoMensalista={removerPrecoMensalista}
+            />
           )}
 
-          {/* Seção Gerenciamento de Registros */}
           {secaoAdmin === 'registros' && (
-          <>
-          {/* Sistema de Deleção */}
-          <div className="card mb-6 bg-red-50 border-2 border-red-200">
-            <h2 className="text-xl font-bold mb-4 flex items-center gap-2 text-red-800">
-              <Trash2 className="w-6 h-6" />
-              Sistema de Deleção de Registros
-            </h2>
-            
-            <div className="space-y-4">
-              {/* Deletar por Dia */}
-              <div className="bg-white p-4 rounded-lg border border-red-300">
-                <h3 className="font-bold text-red-700 mb-3">🗑️ Deletar por Dia</h3>
-                <div className="flex gap-2">
-                  <Input
-                    type="date"
-                    id="dataDeletar"
-                    style={{ flex: 1 }}
-                  />
-                  <Button
-                    variant="danger"
-                    onClick={() => {
-                      const input = document.getElementById('dataDeletar');
-                      if (input.value) {
-                        const data = new Date(input.value + 'T00:00:00');
-                        deletarPorDia(data.getTime());
-                        input.value = '';
-                      }
-                    }}
-                  >
-                    Deletar Dia
-                  </Button>
-                </div>
-                <p className="text-sm text-gray-600 mt-2">Datas disponíveis: {datasUnicasHistorico.length > 0 ? datasUnicasHistorico.join(', ') : 'Nenhuma'}</p>
-              </div>
-
-              {/* Deletar por Mês */}
-              <div className="bg-white p-4 rounded-lg border border-red-300">
-                <h3 className="font-bold text-red-700 mb-3">🗑️ Deletar por Mês</h3>
-                <div className="flex gap-2">
-                  <Select
-                    id="mesDeletar"
-                    style={{ flex: 1 }}
-                    options={opcoesMesesDelecao}
-                  />
-                  <Button
-                    variant="danger"
-                    onClick={() => {
-                      const select = document.getElementById('mesDeletar');
-                      if (select.value) {
-                        const [mes, ano] = select.value.split('/').map(Number);
-                        deletarPorMes(ano, mes);
-                        select.value = '';
-                      }
-                    }}
-                  >
-                    Deletar Mês
-                  </Button>
-                </div>
-              </div>
-
-              {/* Deletar Individual */}
-              <div className="bg-white p-4 rounded-lg border border-red-300">
-                <h3 className="font-bold text-red-700 mb-3">🗑️ Deletar Registros Individuais</h3>
-                {historico.length === 0 ? (
-                  <p className="text-gray-500 text-center py-4">Nenhum registro para deletar</p>
-                ) : (
-                  <div className="space-y-2 max-h-48 overflow-y-auto">
-                    {historico.map((reg) => {
-                      const emoji = reg.tipo === 'moto' ? '🏍️' : '🚗';
-                      return (
-                        <div key={reg.id} className="bg-gray-50 p-3 rounded-lg flex justify-between items-center">
-                          <div className="flex-1">
-                            <p className="font-bold text-lg">{emoji} {reg.placa}</p>
-                            <p className="text-sm text-gray-600">
-                              {reg.modelo} • {reg.cor}
-                            </p>
-                            <p className="text-sm text-gray-600">
-                              {new Date(reg.saida).toLocaleString('pt-BR')} • Permanência: {formatarTempo(reg.permanencia)}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <p className="text-lg font-bold text-green-600">
-                              R$ {reg.valor.toFixed(2)}
-                            </p>
-                            {(impressoraConectada || impressoraUSBConectada) && (
-                              <button
-                                onClick={() => imprimirSaida(reg, formatarTempo(reg.permanencia), reg.valor)}
-                                className="bg-purple-500 hover:bg-purple-600 text-white p-2 rounded-lg transition-all active:scale-95"
-                                title="Imprimir recibo"
-                              >
-                                🖨️
-                              </button>
-                            )}
-                            <button
-                              onClick={() => deletarRegistro(reg.id)}
-                              className="bg-red-500 hover:bg-red-600 text-white p-2 rounded-lg transition-all active:scale-95"
-                              title="Deletar este registro"
-                            >
-                              🗑️
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Histórico do Dia */}
-          <div className="card mb-6">
-            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-              <History className="w-6 h-6 text-purple-600" />
-              Histórico Total ({historico.length} registros)
-            </h2>
-            {historico.length === 0 ? (
-              <p className="text-gray-500 text-center py-4">Nenhum registro ainda</p>
-            ) : (
-              <div className="space-y-2 max-h-96 overflow-y-auto">
-                {historico.map((reg) => {
-                  const emoji = reg.tipo === 'moto' ? '🏍️' : '🚗';
-                  return (
-                  <div key={reg.id} className="bg-gray-50 p-3 rounded-lg flex justify-between items-center">
-                    <div>
-                      <p className="font-bold text-lg">{emoji} {reg.placa}</p>
-                      <p className="text-sm text-gray-600">
-                        {reg.modelo} • {reg.cor}
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        Entrada: {new Date(reg.entrada).toLocaleTimeString('pt-BR')}
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        Saída: {new Date(reg.saida).toLocaleTimeString('pt-BR')}
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        Permanência: {formatarTempo(reg.permanencia)}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-2xl font-bold text-green-600">
-                        R$ {reg.valor.toFixed(2)}
-                      </p>
-                    </div>
-                  </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* Veículos Cadastrados */}
-          <div className="card mb-6">
-            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-              <Car className="w-6 h-6 text-blue-600" />
-              Veículos Cadastrados ({Object.keys(veiculosCadastrados).length})
-            </h2>
-            {Object.keys(veiculosCadastrados).length === 0 ? (
-              <p className="text-gray-500 text-center py-4">Nenhum veículo cadastrado na memória</p>
-            ) : (
-              <div className="space-y-2 max-h-48 overflow-y-auto">
-                {Object.entries(veiculosCadastrados).map(([placa, dados]) => (
-                  <div key={placa} className="bg-blue-50 p-3 rounded-lg flex justify-between items-center">
-                    <div>
-                      <p className="font-bold text-blue-900">{placa}</p>
-                      <p className="text-sm text-gray-600">
-                        {dados.modelo} • {dados.cor}
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => {
-                        const novosCadastrados = { ...veiculosCadastrados };
-                        delete novosCadastrados[placa];
-                        setVeiculosCadastrados(novosCadastrados);
-                      }}
-                      className="bg-red-500 hover:bg-red-600 text-white p-2 rounded-lg transition-all active:scale-95"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-          </>
+            <LimpezaDados 
+              datasUnicasHistorico={datasUnicasHistorico}
+              deletarPorDia={deletarPorDia}
+              opcoesMesesDelecao={opcoesMesesDelecao}
+              deletarPorMes={deletarPorMes}
+              historico={historico}
+              impressoraConectada={impressoraConectada}
+              impressoraUSBConectada={impressoraUSBConectada}
+              imprimirSaida={imprimirSaida}
+              formatarTempo={formatarTempo}
+              deletarRegistro={deletarRegistro}
+              veiculosCadastrados={veiculosCadastrados}
+              setVeiculosCadastrados={setVeiculosCadastrados}
+            />
           )}
 
-          {/* Seção Controle de Mensalistas */}
           {secaoAdmin === 'mensalistas' && (
-          <>
-          {/* CONTROLE DE MENSALISTAS */}
-          <div className="card mb-6 bg-gradient-to-r from-emerald-50 to-teal-50 border-2 border-emerald-300">
-            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-              <Users className="w-6 h-6 text-emerald-600" />
-              Controle de Cadastros
-            </h2>
-            
-            <div className="space-y-4">
-              <p className="text-gray-700 text-sm">
-                Gerencie mensalistas, ative cadastros pendentes e envie convites via WhatsApp.
-              </p>
-
-              <div className="bg-white p-4 rounded-lg">
-                <LazyPage component={AbaSolicitacoesMensalistasLazy} />
-              </div>
-
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setShowModalConvite(true)}
-                  className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold py-3 px-4 rounded-lg transition-all active:scale-95 flex items-center justify-center gap-2 shadow-lg"
-                >
-                  <MessageCircle className="w-5 h-5" />
-                  Convidar Mensalista
-                </button>
-              </div>
-
-              <div className="bg-emerald-50 p-3 rounded-lg text-sm text-emerald-900 border border-emerald-200">
-                <p className="font-semibold mb-1">💡 Como Funciona?</p>
-                <ol className="space-y-1 list-decimal list-inside text-xs">
-                  <li>Clique em "Convidar" e digite o número do cliente</li>
-                  <li>Sistema envia link de cadastro pelo WhatsApp</li>
-                  <li>Cliente preenche dados (nome, CPF, placa, etc)</li>
-                  <li>Você ativa o cadastro com vigência de dias</li>
-                  <li>Mensalista obtém acesso automático ao pátio!</li>
-                </ol>
-              </div>
-            </div>
-          </div>
-
-          {/* Botão Limpar Tudo */}
-          <Button 
-            variant="danger" 
-            fullWidth
-            onClick={limparTudo}
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: DESIGN.spacing.sm, marginTop: DESIGN.spacing.md }}
-          >
-            <Trash2 className="w-5 h-5" />
-            Limpar Todos os Dados
-          </Button>
-          </>
+            <GestaoMensalistas 
+              AbaSolicitacoesMensalistasLazy={AbaSolicitacoesMensalistasLazy}
+              showModalConvite={showModalConvite}
+              setShowModalConvite={setShowModalConvite}
+              showToast={showToast}
+              limparTudo={limparTudo}
+            />
           )}
         </div>
-
-        {/* Modal de Convite WhatsApp */}
-        <ModalConviteWhatsApp
-          isOpen={showModalConvite}
-          onClose={() => setShowModalConvite(false)}
-          onEnviar={(numero, sucesso) => {
-            if (sucesso) {
-              showToast(`Convite enviado para ${numero}!`, 'success');
-            }
-          }}
-        />
 
         {renderToasts()}
         <ConfirmDialog
@@ -3949,15 +2628,20 @@ ${'='.repeat(50)}
           onCancel={cancelarDialogo}
         />
       </div>
+    </div>
     );
   }
 
   // Se não está autenticado, mostrar tela de login
   if (authCarregando) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-        <div className="bg-white rounded-xl shadow-xl p-6 text-center">
-          <p className="text-gray-700 font-medium">Carregando sessão...</p>
+      <div className="min-h-screen bg-[#020617] flex items-center justify-center p-4">
+        <div className="bg-[#0F172A]/80 backdrop-blur-md border border-white/10 rounded-xl shadow-2xl p-8 text-center max-w-sm w-full animate-pulse">
+          <div className="w-16 h-16 bg-gradient-to-br from-cyan-900 to-cyan-500 rounded-full mx-auto flex items-center justify-center mb-4 shadow-[0_0_20px_rgba(34,211,238,0.4)]">
+            <span className="text-2xl font-black text-white">C</span>
+          </div>
+          <p className="text-gray-300 font-bold text-lg">Carregando sessão...</p>
+          <p className="text-cyan-400 text-xs mt-2 font-mono tracking-widest">COMMAND PARK SECURITY</p>
         </div>
       </div>
     );
@@ -3965,11 +2649,108 @@ ${'='.repeat(50)}
 
   if (!usuarioAutenticado) {
     return (
-      <div>
-        <LazyPage 
-          component={PaginaLoginLazy}
-          onLoginSuccess={(usuario) => setUsuarioAutenticado(usuario)}
-        />
+      <div className="min-h-screen bg-[#020617] text-gray-100 font-sans transition-colors duration-300">
+        <div className="flex items-center justify-center min-h-screen p-4 relative overflow-hidden">
+          {/* Background Effects */}
+          <div className="absolute inset-0 bg-[#020617]"></div>
+          <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-cyan-900/20 blur-[120px]"></div>
+          <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] rounded-full bg-blue-900/20 blur-[120px]"></div>
+          
+          <div className="w-full max-w-md bg-[#0F172A]/40 backdrop-blur-xl rounded-2xl shadow-[0_0_50px_rgba(0,0,0,0.5)] border border-white/10 p-8 relative z-10 animate-fade-in-up">
+            <div className="text-center mb-8">
+              {config.logoUrl ? (
+                <div className="w-24 h-24 mx-auto mb-4 relative group">
+                   <div className="absolute inset-0 bg-cyan-500/20 rounded-2xl blur-xl group-hover:blur-2xl transition-all duration-500"></div>
+                   <img 
+                    src={config.logoUrl} 
+                    alt="Logo Empresa" 
+                    className="w-full h-full object-contain relative z-10 drop-shadow-2xl transform hover:scale-105 transition-transform duration-500"
+                   />
+                </div>
+              ) : (
+                <div className="w-20 h-20 bg-gradient-to-br from-cyan-900 to-cyan-500 rounded-2xl mx-auto flex items-center justify-center shadow-[0_0_20px_rgba(34,211,238,0.4)] mb-4 transform rotate-3 hover:rotate-6 transition-transform duration-500">
+                  <span className="text-4xl font-black text-white tracking-tighter">
+                    {config.nomeEmpresa ? config.nomeEmpresa.charAt(0).toUpperCase() : 'C'}
+                  </span>
+                </div>
+              )}
+              
+              <h1 className="text-3xl font-bold text-white mb-2 tracking-tight uppercase">
+                {config.nomeEmpresa || 'COMMAND PARK'}
+              </h1>
+              
+              {config.cnpj && (
+                <p className="text-gray-400 text-xs font-mono mb-1 tracking-wider">
+                  CNPJ: {formatarCNPJ(config.cnpj)}
+                </p>
+              )}
+              
+              <p className="text-cyan-400 text-sm font-medium tracking-widest uppercase mt-2">
+                Security Protocol v3.0
+              </p>
+            </div>
+
+            <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-bold text-gray-400 mb-2 uppercase tracking-wider">Usuário</label>
+                <div className="relative group">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <User className="h-5 w-5 text-gray-500 group-focus-within:text-cyan-400 transition-colors" />
+                  </div>
+                  <input
+                    type="email"
+                    value={emailInput}
+                    onChange={(e) => setEmailInput(e.target.value)}
+                    className="block w-full pl-12 pr-4 py-4 bg-[#0F172A]/50 border border-gray-700 rounded-xl text-white placeholder-gray-600 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-all font-mono text-lg"
+                    placeholder=""
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-gray-400 mb-2 uppercase tracking-wider">Senha de Acesso</label>
+                <div className="relative group">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <Lock className="h-5 w-5 text-gray-500 group-focus-within:text-cyan-400 transition-colors" />
+                  </div>
+                  <input
+                    type="password"
+                    value={senhaInput}
+                    onChange={(e) => setSenhaInput(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && fazerLogin()}
+                    className="block w-full pl-12 pr-4 py-4 bg-[#0F172A]/50 border border-gray-700 rounded-xl text-white placeholder-gray-600 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-all font-mono text-lg"
+                    placeholder="••••••••"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center">
+                <input
+                  id="lembrar-login"
+                  type="checkbox"
+                  checked={lembrarLogin}
+                  onChange={(e) => setLembrarLogin(e.target.checked)}
+                  className="w-4 h-4 rounded border-gray-600 bg-[#0F172A] text-cyan-400 focus:ring-cyan-400 focus:ring-offset-0"
+                />
+                <label htmlFor="lembrar-login" className="ml-2 text-sm text-gray-400 cursor-pointer select-none">
+                  Lembrar de mim
+                </label>
+              </div>
+
+              <button
+                onClick={fazerLogin}
+                className="w-full bg-gradient-to-r from-cyan-700 to-blue-600 hover:from-cyan-600 hover:to-blue-500 text-white font-bold py-3.5 px-4 rounded-xl shadow-[0_0_20px_rgba(34,211,238,0.3)] hover:shadow-[0_0_30px_rgba(34,211,238,0.5)] transform hover:-translate-y-0.5 transition-all duration-300 uppercase tracking-wider text-sm flex items-center justify-center gap-2"
+              >
+                <LogIn size={18} />
+                Acessar Sistema
+              </button>
+            </div>
+            
+            <div className="mt-8 text-center">
+              <p className="text-xs text-gray-500">© 2026 Command Park Solutions. Todos os direitos reservados.</p>
+            </div>
+          </div>
+        </div>
         {renderToasts()}
       </div>
     );
@@ -3977,15 +2758,23 @@ ${'='.repeat(50)}
 
   // TELA HOME (OPERACIONAL)
   return (
-    <div className="min-h-screen bg-slate-100 pb-20">
+    <div className="min-h-screen bg-[#050A14] text-gray-100 pb-20 transition-colors duration-300">
       <div style={{ position: 'fixed', left: 0, top: 0, bottom: 0, width: '16rem', zIndex: 5 }}>
         <Sidebar selected="principal" onNavigate={(item) => {
           if (item === 'operador') { setTela('admin'); setSecaoAdmin('operadores'); }
           if (item === 'caixa') { setShowModalControleCaixa(true); }
           if (item === 'entrada') { setAbaHome('patio'); }
           if (item === 'saida') { setAbaHome('saidas'); }
-          if (item === 'logout') { supabaseService.logout(); setUsuarioAutenticado(null); }
-        }} isDesktop />
+          if (item === 'logout') { 
+            supabaseService.logout(); 
+            setUsuarioAutenticado(null);
+            setSenhaInput('');
+            if (!lembrarLogin) {
+              setEmailInput('');
+            }
+            setSenhaInput('');
+          }
+        }} isDesktop config={config} />
       </div>
       <div className="ml-0 md:ml-64 max-w-6xl mx-auto px-4" style={String(usuarioAutenticado?.nivelAcesso || '').toUpperCase() === 'MASTER' ? { maxWidth: '100%', margin: 0, padding: 0 } : {}}>
         <ProLayout
@@ -3997,10 +2786,15 @@ ${'='.repeat(50)}
             ocupacao: Math.min(100, Math.round((veiculos.length / 100) * 100)),
             faturamento: totalArrecadadoDia
           }]}
+          config={config}
           onAdmin={() => setTela('admin')}
           onLogout={() => {
             supabaseService.logout();
             setUsuarioAutenticado(null);
+            if (!lembrarLogin) {
+              setEmailInput('');
+            }
+            setSenhaInput('');
           }}
           onToggleMap={() => setMostrarMapaFullScreen(!mostrarMapaFullScreen)}
           fullScreen={String(usuarioAutenticado?.nivelAcesso || '').toUpperCase() === 'MASTER' || mostrarMapaFullScreen}
@@ -4052,18 +2846,18 @@ ${'='.repeat(50)}
         </ProLayout>
         {/* ALERTA DE MENSALISTA ATIVO */}
         {showAlertaMensalista && (
-          <div className="mb-6 bg-gradient-to-r from-emerald-400 to-green-500 border-4 border-white rounded-xl p-6 shadow-2xl animate-pulse">
+          <div className="mb-6 bg-gradient-to-r from-[#064E3B] to-[#10B981] border-2 border-[#10B981] rounded-xl p-6 shadow-[0_0_30px_rgba(16,185,129,0.4)] animate-pulse">
             <div className="text-center text-white">
               <div className="text-5xl mb-2">🎉</div>
-              <h2 className="text-3xl font-black mb-2">ACESSO LIBERADO!</h2>
-              <div className="bg-white text-emerald-700 rounded-lg p-4 mb-4 shadow-lg">
-                <p className="font-bold text-lg">{showAlertaMensalista.nome}</p>
-                <p className="text-2xl font-mono font-bold">{showAlertaMensalista.placa}</p>
+              <h2 className="text-3xl font-black mb-2 tracking-tighter">ACESSO LIBERADO!</h2>
+              <div className="bg-[#050A14]/50 backdrop-blur-md text-white rounded-lg p-4 mb-4 shadow-lg border border-white/10">
+                <p className="font-bold text-lg uppercase tracking-wider">{showAlertaMensalista.nome}</p>
+                <p className="text-2xl font-mono font-bold text-[#10B981]">{showAlertaMensalista.placa}</p>
               </div>
-              <p className="text-sm font-semibold mb-3">Mensalista Ativo ✓</p>
+              <p className="text-sm font-semibold mb-3 text-emerald-100">Mensalista Ativo ✓</p>
               <button
                 onClick={() => setShowAlertaMensalista(null)}
-                className="bg-white text-emerald-700 font-bold px-6 py-2 rounded-lg hover:bg-gray-100 transition-all"
+                className="bg-white text-[#064E3B] font-bold px-6 py-2 rounded-lg hover:bg-gray-100 transition-all shadow-lg"
               >
                 Fechar
               </button>
@@ -4082,6 +2876,10 @@ ${'='.repeat(50)}
           onLogout={() => {
             supabaseService.logout();
             setUsuarioAutenticado(null);
+            if (!lembrarLogin) {
+              setEmailInput('');
+            }
+            setSenhaInput('');
           }}
         />
 
@@ -4190,39 +2988,39 @@ ${'='.repeat(50)}
         {/* Ações rápidas estilo index2 */}
         <section className="p-2 grid grid-cols-2 md:grid-cols-4 gap-3">
           <button
-            className="flex flex-col items-center justify-center p-4 bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:border-blue-400 transition group"
+            className="flex flex-col items-center justify-center p-4 bg-[#1E293B]/70 rounded-xl border border-white/10 shadow-sm hover:shadow-lg hover:border-blue-400/50 transition group backdrop-blur-sm"
             onClick={() => setAbaHome('patio')}
             title="Pátio"
           >
-            <Car className="text-blue-600 mb-2 group-hover:scale-110 transition" />
-            <span className="text-xs font-bold uppercase">Pátio ({veiculos.length})</span>
+            <Car className="text-blue-400 mb-2 group-hover:scale-110 transition" />
+            <span className="text-xs font-bold uppercase text-gray-300 group-hover:text-white">Pátio ({veiculos.length})</span>
           </button>
           <button
-            className="flex flex-col items-center justify-center p-4 bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:border-green-400 transition group"
+            className="flex flex-col items-center justify-center p-4 bg-[#1E293B]/70 rounded-xl border border-white/10 shadow-sm hover:shadow-lg hover:border-emerald-400/50 transition group backdrop-blur-sm"
             onClick={() => setAbaHome('saidas')}
             title="Saídas"
           >
-            <CheckCircle className="text-green-600 mb-2 group-hover:scale-110 transition" />
-            <span className="text-xs font-bold uppercase">Saídas ({historico.length})</span>
+            <CheckCircle className="text-emerald-400 mb-2 group-hover:scale-110 transition" />
+            <span className="text-xs font-bold uppercase text-gray-300 group-hover:text-white">Saídas ({historico.length})</span>
           </button>
           <button
-            className="flex flex-col items-center justify-center p-4 bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:border-orange-400 transition group"
+            className="flex flex-col items-center justify-center p-4 bg-[#1E293B]/70 rounded-xl border border-white/10 shadow-sm hover:shadow-lg hover:border-amber-400/50 transition group backdrop-blur-sm"
             onClick={() => setShowModalControleCaixa(true)}
             title="Caixa"
           >
-            <DollarSign className="text-orange-500 mb-2 group-hover:scale-110 transition" />
-            <span className="text-xs font-bold uppercase">Caixa</span>
+            <DollarSign className="text-amber-400 mb-2 group-hover:scale-110 transition" />
+            <span className="text-xs font-bold uppercase text-gray-300 group-hover:text-white">Caixa</span>
           </button>
           <button
-            className="flex flex-col items-center justify-center p-4 bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:border-purple-400 transition group"
+            className="flex flex-col items-center justify-center p-4 bg-[#1E293B]/70 rounded-xl border border-white/10 shadow-sm hover:shadow-lg hover:border-purple-400/50 transition group backdrop-blur-sm"
             onClick={() => {
               setTela('admin');
               setSecaoAdmin('mensalistas');
             }}
             title="Mensalistas"
           >
-            <Users className="text-purple-600 mb-2 group-hover:scale-110 transition" />
-            <span className="text-xs font-bold uppercase">Mensalistas</span>
+            <Users className="text-purple-400 mb-2 group-hover:scale-110 transition" />
+            <span className="text-xs font-bold uppercase text-gray-300 group-hover:text-white">Mensalistas</span>
           </button>
         </section>
 
@@ -4380,8 +3178,8 @@ ${'='.repeat(50)}
         </div>
 
         {/* Entrada de Veículo */}
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-6">
-          <h2 className="text-xl font-bold mb-4">Registrar Entrada</h2>
+        <div className="bg-[#1E293B]/70 backdrop-blur-md p-6 rounded-2xl shadow-2xl border border-white/10 mb-6">
+          <h2 className="text-xl font-bold mb-4 text-white">Registrar Entrada</h2>
           
           {/* Campo de Placa com Autocompletar */}
           <div className="relative mb-4">
@@ -4476,8 +3274,8 @@ ${'='.repeat(50)}
 
         {/* Veículos no Pátio */}
         {abaHome === 'patio' && (
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4">
-          <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+        <div className="bg-[#1E293B]/70 backdrop-blur-md rounded-2xl shadow-2xl border border-white/10 p-4">
+          <h2 className="text-xl font-bold mb-4 flex items-center gap-2 text-white">
             <Car className="w-6 h-6" />
             Veículos no Pátio ({veiculos.length})
           </h2>
@@ -4492,32 +3290,32 @@ ${'='.repeat(50)}
                 const emoji = veiculo.tipo === 'moto' ? '🏍️' : '🚗';
                 
                 return (
-                  <div key={veiculo.id} className="bg-gradient-to-r from-blue-50 to-blue-100 p-4 rounded-lg border-2 border-blue-200">
+                  <div key={veiculo.id} className="bg-gradient-to-r from-[#0B1120] to-[#1E293B] p-4 rounded-lg border border-white/10 shadow-lg mb-3">
                     <div className="flex justify-between items-start mb-3">
                       <div>
-                        <p className="text-2xl font-bold text-blue-900">
+                        <p className="text-2xl font-bold text-blue-300">
                           {emoji} {veiculo.placa}
                         </p>
-                        <p className="text-sm text-gray-600 mt-1">
+                        <p className="text-sm text-gray-400 mt-1">
                           {veiculo.modelo} • {veiculo.cor}
                         </p>
-                        <p className="text-sm text-gray-600 flex items-center gap-1 mt-1">
+                        <p className="text-sm text-gray-400 flex items-center gap-1 mt-1">
                           <Clock className="w-4 h-4" />
                           Entrada: {new Date(veiculo.entrada).toLocaleTimeString('pt-BR')}
                         </p>
                       </div>
                       <div className="text-right">
-                        <p className="text-3xl font-bold text-green-600">
+                        <p className="text-3xl font-bold text-emerald-400">
                           R$ {valorAtual.toFixed(2)}
                         </p>
                       </div>
                     </div>
                     
-                    <div className="bg-white p-3 rounded-lg mb-3">
-                      <p className="text-center text-2xl font-mono font-bold text-blue-900">
+                    <div className="bg-[#050A14] p-3 rounded-lg mb-3 border border-white/5">
+                      <p className="text-center text-2xl font-mono font-bold text-blue-200">
                         {formatarTempo(tempoDecorrido)}
                       </p>
-                      <p className="text-center text-xs text-gray-600 mt-1">Tempo decorrido</p>
+                      <p className="text-center text-xs text-gray-500 mt-1">Tempo decorrido</p>
                     </div>
                     
                     <div style={{ display: 'flex', gap: DESIGN.spacing.sm }}>
@@ -4628,7 +3426,7 @@ ${'='.repeat(50)}
                       width: '100%',
                       alignItems: 'center',
                       fontSize: DESIGN.typography.sizes.sm,
-                      color: DESIGN.colors.neutral[900]
+                      color: '#f1f5f9'
                     }}
                   >
                     <span>{item.placa}</span>

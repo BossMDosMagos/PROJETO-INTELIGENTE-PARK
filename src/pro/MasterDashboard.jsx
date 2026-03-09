@@ -102,184 +102,116 @@ export default function MasterDashboard({ unidades = [], ocupacao = {}, bi = {} 
       }));
       setMappedUnidades(processed);
     };
-
-    if (unidades.length > 0) {
-      processUnits();
-    }
+    processUnits();
   }, [unidades]);
 
   const selectedUnit = mappedUnidades.find(u => u.id === selectedId);
-  
-  const filteredUnidades = mappedUnidades.filter(u => 
-    u.nome.toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
-  const getProgressColor = (pct) => {
-    if (pct < 50) return 'bg-emerald-500';
-    if (pct < 80) return 'bg-amber-500';
-    return 'bg-red-500';
-  };
+  // Métricas Consolidadas
+  const totalFaturamento = bi.faturamento || 0;
+  const ocupacaoMedia = bi.ocupacaoGlobal || 0;
+  const alertasAtivos = mappedUnidades.filter(u => u.ocupacao > 90).length;
 
   return (
-    <div style={{ 
-      position: 'fixed', 
-      top: 0, 
-      left: 0, 
-      width: '100vw', 
-      height: '100vh', 
-      overflow: 'hidden',
-      zIndex: 50 // Abaixo do ProLayout header se necessário, mas aqui queremos FullScreen
-    }}>
-      
-      {/* Sidebar de Controle */}
-      <div style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        bottom: 0,
-        width: '350px',
-        background: 'rgba(15, 23, 42, 0.85)',
-        backdropFilter: 'blur(20px)',
-        borderRight: '1px solid rgba(255,255,255,0.1)',
-        zIndex: 1000,
-        display: 'flex',
-        flexDirection: 'column',
-        padding: '24px 0 0 0',
-        boxShadow: '10px 0 30px rgba(0,0,0,0.5)'
-      }}>
-        <div style={{ padding: '0 24px 24px 24px' }}>
-          <h2 style={{ fontSize: '1.5rem', fontWeight: '800', color: 'white', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <LayoutDashboard color="#3B82F6" />
-            Monitoramento
+    <div className="flex h-[calc(100vh-80px)] gap-4 p-4 relative z-10 pointer-events-none">
+      {/* Sidebar Flutuante */}
+      <div className="w-96 bg-[#0F172A]/60 backdrop-blur-md border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col pointer-events-auto">
+        {/* Header da Lista */}
+        <div className="p-4 border-b border-slate-800 bg-[#0F172A]/80">
+          <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+            <LayoutDashboard className="w-5 h-5 text-cyan-400" />
+            Visão Geral da Rede
           </h2>
-          <p style={{ color: '#94A3B8', fontSize: '0.9rem' }}>
-            {mappedUnidades.length} Unidades Ativas
-          </p>
+          
+          {/* Cards de Métricas (Mini) */}
+          <div className="grid grid-cols-2 gap-2 mb-4">
+            <div className="bg-slate-900/50 p-3 rounded-xl border border-slate-800">
+              <div className="text-xs text-slate-400 mb-1">Faturamento Hoje</div>
+              <div className="text-lg font-mono font-bold text-emerald-400">
+                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalFaturamento)}
+              </div>
+            </div>
+            <div className="bg-slate-900/50 p-3 rounded-xl border border-slate-800">
+              <div className="text-xs text-slate-400 mb-1">Ocupação Média</div>
+              <div className="text-lg font-mono font-bold text-cyan-400">{ocupacaoMedia}%</div>
+            </div>
+          </div>
 
-          <div style={{ 
-            marginTop: '20px', 
-            background: 'rgba(255,255,255,0.05)', 
-            borderRadius: '12px', 
-            padding: '10px',
-            display: 'flex',
-            alignItems: 'center',
-            border: '1px solid rgba(255,255,255,0.1)'
-          }}>
-            <Search size={18} color="#94A3B8" style={{ marginRight: '10px' }} />
-            <input 
-              type="text" 
-              placeholder="Buscar unidade..." 
+          {/* Busca */}
+          <div className="relative">
+            <Search className="absolute left-3 top-3 w-4 h-4 text-slate-500" />
+            <input
+              type="text"
+              placeholder="Buscar unidade..."
               value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                color: 'white',
-                outline: 'none',
-                width: '100%'
-              }}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full bg-slate-900/80 border border-slate-700 text-slate-200 pl-10 pr-4 py-2 rounded-lg focus:outline-none focus:border-cyan-500 placeholder-slate-600 text-sm"
             />
           </div>
         </div>
 
-        <div style={{ flex: 1, overflowY: 'auto', padding: '0 16px' }}>
-          {filteredUnidades.map(u => (
-            <div 
+        {/* Lista de Unidades */}
+        <div className="flex-1 overflow-y-auto p-2 space-y-2 custom-scrollbar">
+          {mappedUnidades
+            .filter(u => u.nome.toLowerCase().includes(searchTerm.toLowerCase()))
+            .map(u => (
+            <div
               key={u.id}
               onClick={() => setSelectedId(u.id)}
-              style={{
-                padding: '16px',
-                marginBottom: '12px',
-                borderRadius: '16px',
-                background: selectedId === u.id ? 'linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(37, 99, 235, 0.2) 100%)' : 'rgba(255,255,255,0.03)',
-                border: selectedId === u.id ? '1px solid #3B82F6' : '1px solid rgba(255,255,255,0.05)',
-                cursor: 'pointer',
-                transition: 'all 0.3s ease'
-              }}
+              className={`p-3 rounded-xl border transition-all cursor-pointer group ${
+                selectedId === u.id 
+                  ? 'bg-cyan-900/20 border-cyan-500/50 shadow-[0_0_15px_rgba(6,182,212,0.1)]' 
+                  : 'bg-slate-900/40 border-slate-800 hover:bg-slate-800/60'
+              }`}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                <strong style={{ color: 'white', fontSize: '1.1rem' }}>{u.nome}</strong>
-                <span style={{ 
-                  background: 'rgba(0,0,0,0.3)', 
-                  padding: '2px 8px', 
-                  borderRadius: '6px', 
-                  fontSize: '0.8rem',
-                  color: '#94A3B8'
-                }}>
-                  {u.cidade ? u.cidade : 'Brasil'}
-                </span>
+              <div className="flex justify-between items-start mb-2">
+                <h3 className={`font-bold text-sm ${selectedId === u.id ? 'text-cyan-400' : 'text-slate-200 group-hover:text-white'}`}>
+                  {u.nome}
+                </h3>
+                {u.ocupacao > 90 && (
+                  <AlertCircle className="w-4 h-4 text-red-500 animate-pulse" />
+                )}
               </div>
               
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#94A3B8', fontSize: '0.85rem', marginBottom: '12px' }}>
-                <Car size={14} />
-                <span>{u.ocupacao || 0}% Ocupação</span>
-              </div>
-
-              {/* Progress Bar Container */}
-              <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.1)', borderRadius: '3px', overflow: 'hidden' }}>
-                {/* Progress Bar Fill */}
-                <div className={getProgressColor(u.ocupacao || 0)} style={{ 
-                  width: `${u.ocupacao || 0}%`, 
-                  height: '100%',
-                  transition: 'width 1s ease-in-out'
-                }} />
-              </div>
-
-              {selectedId === u.id && (
-                <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.1)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '0.85rem' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                    <span style={{ color: '#94A3B8' }}>Veículos Pátio</span>
-                    <span style={{ color: 'white', fontWeight: 'bold' }}>{Math.round((u.ocupacao / 100) * (u.qtd_vagas || 100))}</span>
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                    <span style={{ color: '#94A3B8' }}>Saídas Hoje</span>
-                    <span style={{ color: 'white', fontWeight: 'bold' }}>--</span>
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', gridColumn: 'span 2', marginTop: '4px' }}>
-                    <span style={{ color: '#94A3B8' }}>Arrecadação Hoje</span>
-                    <span style={{ color: '#10B981', fontWeight: 'bold', fontSize: '1rem' }}>R$ {(u.faturamento || 0).toFixed(2)}</span>
-                  </div>
+              <div className="space-y-2">
+                <div className="flex justify-between text-xs">
+                  <span className="text-slate-500">Ocupação</span>
+                  <span className={`font-mono font-bold ${
+                    u.ocupacao > 90 ? 'text-red-400' : u.ocupacao > 70 ? 'text-amber-400' : 'text-emerald-400'
+                  }`}>
+                    {u.ocupacao}%
+                  </span>
                 </div>
-              )}
+                
+                {/* Barra de Progresso */}
+                <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                  <div 
+                    className={`h-full rounded-full transition-all duration-500 ${
+                      u.ocupacao > 90 ? 'bg-red-500' : u.ocupacao > 70 ? 'bg-amber-500' : 'bg-emerald-500'
+                    }`}
+                    style={{ width: `${u.ocupacao}%` }}
+                  />
+                </div>
+
+                <div className="flex justify-between items-center pt-1">
+                  <div className="flex items-center gap-1 text-xs text-slate-500">
+                    <Car className="w-3 h-3" />
+                    <span>{Math.round((u.ocupacao / 100) * (u.qtd_vagas || 100))}/{u.qtd_vagas || 100}</span>
+                  </div>
+                  <span className="text-xs font-mono text-slate-400">
+                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(u.faturamento || 0)}
+                  </span>
+                </div>
+              </div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Mapa Full Screen */}
-      <MapContainer
-        center={[-23.550520, -46.633308]}
-        zoom={13}
-        style={{ width: '100%', height: '100%' }}
-        zoomControl={false} // Custom positioning if needed, or default is fine (usually top-left)
-      >
-        <TileLayer
-          attribution='&copy; OpenStreetMap'
-          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" // Dark map style
-        />
-        
-        <MapController selectedUnit={selectedUnit} />
-        <FitBoundsController units={mappedUnidades} />
-
-        {mappedUnidades.map(u => (
-          <Marker 
-            key={u.id} 
-            position={[u.lat, u.lng]}
-            eventHandlers={{
-              click: () => setSelectedId(u.id),
-            }}
-          >
-            <Popup>
-              <div style={{ minWidth: '200px', color: '#0F172A' }}>
-                <h3 style={{ fontWeight: 'bold', fontSize: '1.1rem', marginBottom: '4px' }}>{u.nome}</h3>
-                <p style={{ margin: 0, color: '#64748B' }}>Ocupação: <strong>{u.ocupacao}%</strong></p>
-                <p style={{ margin: 0, color: '#64748B' }}>Faturamento: <strong>R$ {u.faturamento}</strong></p>
-                {u.endereco && <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: '#64748B' }}>{u.endereco}, {u.numero}</p>}
-              </div>
-            </Popup>
-          </Marker>
-        ))}
-      </MapContainer>
+      {/* Controller Invisível para FlyTo e FitBounds */}
+      <div className="hidden">
+        {/* O mapa real está no ProLayout, este componente só renderiza a lista lateral sobreposta */}
+      </div>
     </div>
   );
 }

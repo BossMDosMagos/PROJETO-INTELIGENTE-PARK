@@ -192,21 +192,21 @@ export function AbaSolicitacoesMensalistas() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-yellow-50 border-2 border-yellow-200 rounded-lg p-4">
-          <p className="text-xs uppercase font-bold text-yellow-700">Pendentes</p>
-          <p className="text-3xl font-bold text-yellow-800 mt-2">{contadores.pendentes}</p>
+        <div className="bg-yellow-900/20 border-2 border-yellow-700/50 rounded-lg p-4">
+          <p className="text-xs uppercase font-bold text-yellow-400">Pendentes</p>
+          <p className="text-3xl font-bold text-yellow-300 mt-2">{contadores.pendentes}</p>
         </div>
-        <div className="bg-green-50 border-2 border-green-200 rounded-lg p-4">
-          <p className="text-xs uppercase font-bold text-green-700">Ativos</p>
-          <p className="text-3xl font-bold text-green-800 mt-2">{contadores.ativos}</p>
+        <div className="bg-green-900/20 border-2 border-green-700/50 rounded-lg p-4">
+          <p className="text-xs uppercase font-bold text-green-400">Ativos</p>
+          <p className="text-3xl font-bold text-green-300 mt-2">{contadores.ativos}</p>
         </div>
-        <div className="bg-gray-50 border-2 border-gray-200 rounded-lg p-4">
-          <p className="text-xs uppercase font-bold text-gray-700">Inativos</p>
-          <p className="text-3xl font-bold text-gray-800 mt-2">{contadores.inativos}</p>
+        <div className="bg-gray-800/50 border-2 border-gray-600/50 rounded-lg p-4">
+          <p className="text-xs uppercase font-bold text-gray-400">Inativos</p>
+          <p className="text-3xl font-bold text-gray-300 mt-2">{contadores.inativos}</p>
         </div>
-        <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
-          <p className="text-xs uppercase font-bold text-blue-700">Total</p>
-          <p className="text-3xl font-bold text-blue-800 mt-2">{contadores.total}</p>
+        <div className="bg-blue-900/20 border-2 border-blue-700/50 rounded-lg p-4">
+          <p className="text-xs uppercase font-bold text-blue-400">Total</p>
+          <p className="text-3xl font-bold text-blue-300 mt-2">{contadores.total}</p>
         </div>
       </div>
 
@@ -218,7 +218,7 @@ export function AbaSolicitacoesMensalistas() {
             className={`px-4 py-2 rounded-lg font-semibold transition ${
               filtro === status
                 ? 'bg-blue-600 text-white shadow-lg'
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                : 'bg-[#1E293B] text-gray-300 hover:bg-[#334155] border border-gray-700'
             }`}
           >
             {status}
@@ -235,8 +235,8 @@ export function AbaSolicitacoesMensalistas() {
       </div>
 
       {filtro === 'PENDENTE' && (
-        <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
-          <label className="block text-sm font-semibold text-gray-700 mb-2">
+        <div className="bg-blue-900/20 border-2 border-blue-700/50 rounded-lg p-4">
+          <label className="block text-sm font-semibold text-blue-300 mb-2">
             Dias de Vigência ao Ativar
           </label>
           <div className="flex gap-2 flex-wrap">
@@ -247,7 +247,7 @@ export function AbaSolicitacoesMensalistas() {
                 className={`px-4 py-2 rounded-lg font-semibold transition ${
                   diasVigencia === dias
                     ? 'bg-blue-600 text-white shadow-lg'
-                    : 'bg-white text-gray-700 border border-blue-300 hover:bg-blue-50'
+                    : 'bg-[#1E293B] text-gray-300 border border-blue-700/50 hover:bg-blue-900/30'
                 }`}
               >
                 {dias}d
@@ -267,18 +267,18 @@ export function AbaSolicitacoesMensalistas() {
       {!carregando && (
         <div className="space-y-3">
           {mensalistasFiltrante.length === 0 ? (
-            <div className="text-center py-12 bg-gray-50 rounded-lg">
-              <Car className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-              <p className="text-gray-600 font-semibold">Nenhum mensalista encontrado</p>
+            <div className="text-center py-12 bg-[#1E293B]/50 rounded-lg border border-gray-700">
+              <Car className="w-12 h-12 text-gray-500 mx-auto mb-3" />
+              <p className="text-gray-400 font-semibold">Nenhum mensalista encontrado</p>
             </div>
           ) : (
             mensalistasFiltrante.map((m) => (
-              <div key={m.id} className="bg-white border-2 border-gray-200 rounded-lg p-4 hover:shadow-lg transition">
+              <div key={m.id} className="bg-[#1E293B] border border-gray-700 rounded-lg p-4 hover:shadow-lg transition hover:border-blue-500/50">
                 <div className="mb-4">
                   <div className="flex items-start justify-between mb-3">
                     <div>
-                      <h3 className="text-lg font-bold text-gray-900">{m.nome}</h3>
-                      <p className="text-sm text-gray-500 font-mono">{formatarCPF(m.cpf)}</p>
+                      <h3 className="text-lg font-bold text-white">{m.nome}</h3>
+                      <p className="text-sm text-gray-400 font-mono">{formatarCPF(m.cpf)}</p>
                     </div>
                     <div className={`flex items-center gap-2 px-3 py-1 rounded-full border ${getBadgeStatus(m.status || 'PENDENTE')}`}>
                       {getIconStatus(m.status || 'PENDENTE')}

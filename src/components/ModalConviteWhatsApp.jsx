@@ -7,9 +7,13 @@ export function ModalConviteWhatsApp({ isOpen, onClose, onEnviar }) {
   const [copiado, setCopiado] = useState(false);
   const [erro, setErro] = useState('');
 
-  const urlCadastro = window.location.origin + window.location.pathname.replace(/\/admin.*/, '/?cadastro=1');
+  const urlCadastro = 'https://BossMDosMagos.github.io/PROJETO-INTELIGENTE-PARK/?cadastro=1';
 
-  const mensagem = `Olá! Para agilizar seu acesso como mensalista, preencha seus dados aqui: ${urlCadastro} Assim que terminar, faremos sua ativação no pátio! 🚗`;
+  const mensagem = `Olá! Para agilizar seu acesso como mensalista, preencha seus dados aqui:
+
+${urlCadastro}
+
+Assim que terminar, faremos sua ativação no pátio! 🚗`;
 
   const handleNumeroChange = (e) => {
     const valor = e.target.value.replace(/\D/g, '').slice(0, 11);
@@ -67,86 +71,94 @@ export function ModalConviteWhatsApp({ isOpen, onClose, onEnviar }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[120]">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-[120]">
+      <div className="bg-[#0F172A] border border-slate-800 rounded-2xl shadow-2xl max-w-md w-full overflow-hidden animate-fade-in-up">
         {/* Header */}
-        <div className="bg-gradient-to-r from-green-500 to-green-600 p-6 flex items-center justify-between">
+        <div className="bg-gradient-to-r from-emerald-600 to-teal-600 p-6 flex items-center justify-between border-b border-white/10">
           <div className="flex items-center gap-3">
             <MessageCircle className="w-6 h-6 text-white" />
             <h3 className="text-xl font-bold text-white">Convidar Mensalista</h3>
           </div>
           <button
             onClick={onClose}
-            className="text-white hover:bg-green-700 p-1 rounded-lg transition"
+            className="text-white/80 hover:text-white hover:bg-white/10 p-2 rounded-lg transition"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Body */}
-        <div className="p-6 space-y-5">
+        <div className="p-6 space-y-6">
           {/* Número de Telefone */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
+            <label className="block text-sm font-semibold text-slate-300 mb-2">
               Número do Cliente (WhatsApp)
             </label>
             <div className="flex gap-2">
-              <span className="text-gray-600 font-semibold py-3 px-4 bg-gray-100 rounded-lg">
-                55
+              <span className="text-slate-400 font-semibold py-3 px-4 bg-[#1E293B] border border-slate-700 rounded-lg flex items-center">
+                +55
               </span>
               <input
                 type="text"
                 value={numeroTelefone}
-                onChange={handleNumeroChange}
-                placeholder="11987654321"
-                className="flex-1 px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-green-500 focus:outline-none transition font-mono text-lg"
+                onChange={(e) => {
+                    const valor = e.target.value.replace(/\D/g, '').slice(0, 11);
+                    setNumeroTelefone(valor);
+                    setErro('');
+                }}
+                placeholder="11999999999"
+                className="flex-1 px-4 py-3 bg-[#1E293B] border border-slate-700 text-white rounded-lg focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 focus:outline-none transition font-mono text-lg placeholder-slate-600"
                 maxLength="11"
               />
             </div>
             {numeroTelefone && (
-              <p className="text-xs text-gray-500 mt-1">
-                {formatarTelefone(numeroTelefone)}
+              <p className="text-xs text-emerald-400 mt-2 font-mono">
+                Formatado: {formatarTelefone(numeroTelefone)}
               </p>
             )}
             {erro && (
-              <p className="text-xs text-red-600 mt-1 font-semibold">{erro}</p>
+              <p className="text-xs text-red-400 mt-2 font-semibold flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-red-400"></span>
+                {erro}
+              </p>
             )}
           </div>
 
           {/* Prévia da Mensagem */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
+            <label className="block text-sm font-semibold text-slate-300 mb-2">
               Mensagem a Enviar
             </label>
-            <div className="bg-green-50 border-2 border-green-200 rounded-lg p-4 space-y-3">
-              <p className="text-sm text-gray-700 leading-relaxed">
+            <div className="bg-[#1E293B]/50 border border-slate-700 rounded-xl p-4 space-y-3">
+              <p className="text-sm text-slate-300 leading-relaxed font-mono">
                 {mensagem}
               </p>
               <button
                 onClick={handleCopiarMensagem}
-                className="w-full text-xs bg-white border border-green-300 text-green-600 hover:bg-green-50 py-2 rounded-lg transition flex items-center justify-center gap-2"
+                className="w-full text-xs bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-600 py-2.5 rounded-lg transition flex items-center justify-center gap-2 font-semibold"
               >
-                <Copy className="w-3 h-3" />
-                Copiar Mensagem
+                {copiado ? <CheckCircle className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                {copiado ? "Copiado!" : "Copiar Mensagem"}
               </button>
             </div>
           </div>
 
           {/* Link do Cadastro */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Link de Cadastro
+            <label className="block text-sm font-semibold text-slate-300 mb-2">
+              Link Direto
             </label>
             <div className="flex gap-2">
               <input
                 type="text"
                 value={urlCadastro}
                 readOnly
-                className="flex-1 px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg text-xs font-mono text-gray-600 overflow-x-auto"
+                className="flex-1 px-3 py-2 bg-[#1E293B] border border-slate-700 rounded-lg text-xs font-mono text-slate-400 overflow-x-auto"
               />
               <button
                 onClick={handleCopiarLink}
-                className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-3 py-2 rounded-lg transition flex items-center gap-1"
+                className="bg-slate-700 hover:bg-slate-600 text-white px-3 py-2 rounded-lg transition flex items-center gap-1 border border-slate-600"
+                title="Copiar Link"
               >
                 <Copy className="w-4 h-4" />
               </button>
@@ -155,17 +167,17 @@ export function ModalConviteWhatsApp({ isOpen, onClose, onEnviar }) {
         </div>
 
         {/* Footer */}
-        <div className="bg-gray-50 p-6 flex gap-3">
+        <div className="bg-[#020617]/50 p-6 flex gap-3 border-t border-slate-800">
           <button
             onClick={onClose}
-            className="flex-1 px-4 py-3 border-2 border-gray-300 text-gray-700 font-bold rounded-lg hover:bg-gray-100 transition"
+            className="flex-1 px-4 py-3 border border-slate-600 text-slate-300 font-bold rounded-xl hover:bg-slate-800 transition"
           >
             Cancelar
           </button>
           <button
             onClick={handleEnviarWhatsApp}
             disabled={!numeroTelefone || numeroTelefone.length !== 11}
-            className="flex-1 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 disabled:opacity-50 text-white font-bold py-3 rounded-lg transition transform disabled:cursor-not-allowed active:scale-95 flex items-center justify-center gap-2"
+            className="flex-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-3 rounded-xl transition transform active:scale-95 flex items-center justify-center gap-2 shadow-lg shadow-emerald-900/20"
           >
             <MessageCircle className="w-5 h-5" />
             Enviar WhatsApp
