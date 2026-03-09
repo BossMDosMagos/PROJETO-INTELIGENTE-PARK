@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Car, CheckCircle, AlertCircle, ArrowRight } from 'lucide-react';
 import { mensalistaService } from '../services/mensalistaService';
 import { audioService } from '../services/audioService';
@@ -9,6 +9,25 @@ export function PaginaCadastroMensalista() {
   const [erro, setErro] = useState('');
   const [sucesso, setSucesso] = useState(false);
   const [mensalistaEnviado, setMensalistaEnviado] = useState(null);
+  const [config, setConfig] = useState({
+    nomeEmpresa: 'Inteligente Park',
+    logoUrl: null
+  });
+
+  // Carregar configurações da empresa
+  useEffect(() => {
+    const carregarConfig = () => {
+      try {
+        const savedConfig = localStorage.getItem('config_empresa');
+        if (savedConfig) {
+          setConfig(JSON.parse(savedConfig));
+        }
+      } catch (error) {
+        console.error('Erro ao carregar config:', error);
+      }
+    };
+    carregarConfig();
+  }, []);
 
   const [formData, setFormData] = useState({
     nome: '',
@@ -135,42 +154,59 @@ export function PaginaCadastroMensalista() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-600 via-blue-500 to-blue-700 p-4 flex items-center justify-center">
-      <div className="w-full max-w-lg">
+    <div className="min-h-screen bg-[#020617] flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Background Effects */}
+      <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-violet-600/20 rounded-full blur-[120px]" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-cyan-600/20 rounded-full blur-[120px]" />
+      </div>
+
+      <div className="w-full max-w-lg relative z-10">
         {/* Header */}
-        <div className="text-center text-white mb-8">
-          <div className="flex justify-center mb-4">
-            <div className="bg-white/20 backdrop-blur-lg p-4 rounded-full">
-              <Car className="w-8 h-8" />
+        <div className="text-center mb-8">
+          <div className="flex justify-center mb-6">
+            <div className="w-24 h-24 bg-gradient-to-br from-violet-600 to-indigo-600 rounded-2xl flex items-center justify-center shadow-2xl shadow-violet-500/20 border border-white/10 p-4">
+              {config.logoUrl ? (
+                <img 
+                  src={config.logoUrl} 
+                  alt="Logo Empresa" 
+                  className="w-full h-full object-contain filter drop-shadow-lg"
+                />
+              ) : (
+                <Car className="w-12 h-12 text-white" />
+              )}
             </div>
           </div>
-          <h1 className="text-4xl font-bold mb-2">Inteligente Park</h1>
-          <p className="text-blue-100 text-lg">Cadastro de Mensalista</p>
+          <h1 className="text-3xl font-bold mb-2 text-white tracking-tight">
+            {config.nomeEmpresa || 'Inteligente Park'}
+          </h1>
+          <p className="text-slate-400 text-lg">Cadastro de Mensalista</p>
         </div>
 
         {/* Card Principal */}
-        <div className="bg-white rounded-3xl shadow-2xl overflow-hidden">
+        <div className="bg-[#1E293B]/60 backdrop-blur-xl border border-slate-700/50 rounded-3xl shadow-2xl overflow-hidden">
           {passo === 1 ? (
             /* PASSO 1: FORMULÁRIO */
             <div className="p-8">
-              <div className="mb-6">
-                <p className="text-gray-600 text-center">
-                  Preencha seus dados abaixo para registrar seu veículo como mensalista. 
-                  Você será contactado em breve para ativação! 🎉
+              <div className="mb-8">
+                <p className="text-slate-400 text-center leading-relaxed">
+                  Preencha seus dados abaixo para registrar seu veículo. 
+                  <br />
+                  <span className="text-cyan-400 font-semibold">Rápido, fácil e seguro! 🚀</span>
                 </p>
               </div>
 
               {erro && (
-                <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 rounded flex items-start gap-3">
-                  <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
-                  <p className="text-red-700 font-medium">{erro}</p>
+                <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex items-start gap-3 animate-shake">
+                  <AlertCircle className="w-5 h-5 text-red-400 mt-0.5 flex-shrink-0" />
+                  <p className="text-red-400 font-medium text-sm">{erro}</p>
                 </div>
               )}
 
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-5">
                 {/* Nome */}
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 ml-1">
                     Nome Completo *
                   </label>
                   <input
@@ -178,15 +214,15 @@ export function PaginaCadastroMensalista() {
                     name="nome"
                     value={formData.nome}
                     onChange={handleInputChange}
-                    placeholder="João da Silva"
-                    className="w-full px-4 py-3 bg-white text-gray-900 border-2 border-gray-300 rounded-xl focus:border-blue-600 focus:outline-none transition"
+                    placeholder="SEU NOME COMPLETO"
+                    className="w-full px-4 py-3.5 bg-[#0F172A] text-white border border-slate-700 rounded-xl focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 focus:outline-none transition placeholder-slate-600"
                     maxLength="60"
                   />
                 </div>
 
                 {/* CPF */}
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 ml-1">
                     CPF *
                   </label>
                   <input
@@ -194,18 +230,18 @@ export function PaginaCadastroMensalista() {
                     name="cpf"
                     value={formData.cpf}
                     onChange={handleInputChange}
-                    placeholder="12345678901"
-                    className="w-full px-4 py-3 bg-white text-gray-900 border-2 border-gray-300 rounded-xl focus:border-blue-600 focus:outline-none transition font-mono"
+                    placeholder="000.000.000-00"
+                    className="w-full px-4 py-3.5 bg-[#0F172A] text-white border border-slate-700 rounded-xl focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 focus:outline-none transition font-mono placeholder-slate-600"
                     maxLength="11"
                   />
-                  <p className="text-xs text-gray-500 mt-1">
-                    {formData.cpf ? formatarCPF(formData.cpf) : '11 dígitos'}
+                  <p className="text-xs text-slate-500 mt-1 ml-1">
+                    {formData.cpf ? formatarCPF(formData.cpf) : 'Apenas números'}
                   </p>
                 </div>
 
                 {/* WhatsApp */}
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 ml-1">
                     WhatsApp *
                   </label>
                   <input
@@ -213,18 +249,18 @@ export function PaginaCadastroMensalista() {
                     name="whatsapp"
                     value={formData.whatsapp}
                     onChange={handleInputChange}
-                    placeholder="11987654321"
-                    className="w-full px-4 py-3 bg-white text-gray-900 border-2 border-gray-300 rounded-xl focus:border-blue-600 focus:outline-none transition font-mono"
+                    placeholder="(00) 00000-0000"
+                    className="w-full px-4 py-3.5 bg-[#0F172A] text-white border border-slate-700 rounded-xl focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 focus:outline-none transition font-mono placeholder-slate-600"
                     maxLength="11"
                   />
-                  <p className="text-xs text-gray-500 mt-1">
-                    {formData.whatsapp ? formatarTelefone(formData.whatsapp) : 'DDD + 9 dígitos'}
+                  <p className="text-xs text-slate-500 mt-1 ml-1">
+                    {formData.whatsapp ? formatarTelefone(formData.whatsapp) : 'DDD + Número'}
                   </p>
                 </div>
 
                 {/* Placa */}
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 ml-1">
                     Placa do Veículo *
                   </label>
                   <input
@@ -233,106 +269,104 @@ export function PaginaCadastroMensalista() {
                     value={formData.placa}
                     onChange={handleInputChange}
                     placeholder="ABC-1234"
-                    className="w-full px-4 py-3 bg-white text-gray-900 border-2 border-gray-300 rounded-xl focus:border-blue-600 focus:outline-none transition font-mono text-lg tracking-widest"
+                    className="w-full px-4 py-3.5 bg-[#0F172A] text-white border border-slate-700 rounded-xl focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 focus:outline-none transition font-mono text-lg tracking-widest placeholder-slate-600 uppercase"
                     maxLength="8"
                   />
                 </div>
 
-                {/* Modelo */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Modelo do Veículo
-                  </label>
-                  <input
-                    type="text"
-                    name="modelo"
-                    value={formData.modelo}
-                    onChange={handleInputChange}
-                    placeholder="GOL, CIVIC, etc"
-                    className="w-full px-4 py-3 bg-white text-gray-900 border-2 border-gray-300 rounded-xl focus:border-blue-600 focus:outline-none transition"
-                    maxLength="30"
-                  />
-                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Modelo */}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 ml-1">
+                      Modelo
+                    </label>
+                    <input
+                      type="text"
+                      name="modelo"
+                      value={formData.modelo}
+                      onChange={handleInputChange}
+                      placeholder="GOL, CIVIC..."
+                      className="w-full px-4 py-3.5 bg-[#0F172A] text-white border border-slate-700 rounded-xl focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 focus:outline-none transition placeholder-slate-600 uppercase"
+                      maxLength="30"
+                    />
+                  </div>
 
-                {/* Cor */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Cor do Veículo
-                  </label>
-                  <input
-                    type="text"
-                    name="cor"
-                    value={formData.cor}
-                    onChange={handleInputChange}
-                    placeholder="BRANCO, PRETO, etc"
-                    className="w-full px-4 py-3 bg-white text-gray-900 border-2 border-gray-300 rounded-xl focus:border-blue-600 focus:outline-none transition"
-                    maxLength="20"
-                  />
+                  {/* Cor */}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 ml-1">
+                      Cor
+                    </label>
+                    <input
+                      type="text"
+                      name="cor"
+                      value={formData.cor}
+                      onChange={handleInputChange}
+                      placeholder="BRANCO..."
+                      className="w-full px-4 py-3.5 bg-[#0F172A] text-white border border-slate-700 rounded-xl focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 focus:outline-none transition placeholder-slate-600 uppercase"
+                      maxLength="20"
+                    />
+                  </div>
                 </div>
 
                 {/* Botão Enviar */}
                 <button
                   type="submit"
                   disabled={carregando}
-                  className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:opacity-50 text-white font-bold py-4 rounded-xl transition transform hover:scale-105 active:scale-95 flex items-center justify-center gap-2 mt-6 shadow-lg"
+                  className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 disabled:opacity-50 text-white font-bold py-4 rounded-xl transition-all transform active:scale-95 flex items-center justify-center gap-2 mt-8 shadow-lg shadow-violet-900/20 border border-white/10"
                 >
                   {carregando ? (
                     <>
                       <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></div>
-                      Enviando...
+                      <span>Processando...</span>
                     </>
                   ) : (
                     <>
-                      Enviar Cadastro
+                      <span>Enviar Cadastro</span>
                       <ArrowRight className="w-5 h-5" />
                     </>
                   )}
                 </button>
-
-                <p className="text-xs text-gray-500 text-center mt-4">
-                  (*) Campos obrigatórios
-                </p>
               </form>
             </div>
           ) : (
             /* PASSO 2: CONFIRMAÇÃO */
             <div className="p-8 text-center">
-              <div className="flex justify-center mb-6">
-                <div className="bg-green-100 p-6 rounded-full animate-pulse">
-                  <CheckCircle className="w-12 h-12 text-green-600" />
+              <div className="flex justify-center mb-8">
+                <div className="bg-emerald-500/20 p-6 rounded-full animate-bounce border border-emerald-500/30">
+                  <CheckCircle className="w-16 h-16 text-emerald-400" />
                 </div>
               </div>
 
-              <h2 className="text-3xl font-bold text-gray-900 mb-4">
-                Cadastro Recebido! ✅
+              <h2 className="text-3xl font-bold text-white mb-4">
+                Cadastro Recebido! 🎉
               </h2>
 
-              <div className="bg-blue-50 rounded-xl p-6 mb-6 border-2 border-blue-200">
-                <p className="text-gray-700 mb-4">
-                  Seus dados foram registrados com sucesso!
+              <div className="bg-[#0F172A] rounded-xl p-6 mb-8 border border-slate-700">
+                <p className="text-slate-400 mb-6 text-sm">
+                  Seus dados foram registrados com sucesso no nosso sistema.
                 </p>
 
-                <div className="space-y-3 text-left">
-                  <div className="flex justify-between items-center py-2 border-b border-blue-200">
-                    <span className="font-semibold text-gray-700">Nome:</span>
-                    <span className="text-gray-900">{mensalistaEnviado?.nome}</span>
+                <div className="space-y-4 text-left">
+                  <div className="flex justify-between items-center py-2 border-b border-slate-800">
+                    <span className="font-semibold text-slate-400 text-sm">Nome:</span>
+                    <span className="text-white font-medium">{mensalistaEnviado?.nome}</span>
                   </div>
-                  <div className="flex justify-between items-center py-2 border-b border-blue-200">
-                    <span className="font-semibold text-gray-700">Placa:</span>
-                    <span className="text-gray-900 font-mono text-lg">{mensalistaEnviado?.placa}</span>
+                  <div className="flex justify-between items-center py-2 border-b border-slate-800">
+                    <span className="font-semibold text-slate-400 text-sm">Placa:</span>
+                    <span className="text-cyan-400 font-mono text-lg font-bold">{mensalistaEnviado?.placa}</span>
                   </div>
                   <div className="flex justify-between items-center py-2">
-                    <span className="font-semibold text-gray-700">Status:</span>
-                    <span className="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-semibold">
-                      PENDENTE
+                    <span className="font-semibold text-slate-400 text-sm">Status:</span>
+                    <span className="bg-amber-500/20 text-amber-400 px-3 py-1 rounded-full text-xs font-bold border border-amber-500/30">
+                      AGUARDANDO APROVAÇÃO
                     </span>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-yellow-50 rounded-xl p-4 mb-6 border-l-4 border-yellow-500">
-                <p className="text-sm text-yellow-900">
-                  <strong>Próximo passo:</strong> Você será contactado via WhatsApp em breve para ativar seu cadastro. 
+              <div className="bg-violet-900/20 rounded-xl p-5 mb-8 border border-violet-500/30">
+                <p className="text-sm text-violet-200">
+                  <strong>Próximo passo:</strong> Nossa equipe entrará em contato via WhatsApp para ativar seu acesso. 
                   Fique atento! 📱
                 </p>
               </div>
@@ -342,21 +376,23 @@ export function PaginaCadastroMensalista() {
                   setPasso(1);
                   setSucesso(false);
                 }}
-                className="w-full bg-gray-900 hover:bg-gray-800 text-white font-bold py-3 rounded-xl transition transform active:scale-95"
+                className="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-3.5 rounded-xl transition border border-slate-700 hover:text-white"
               >
                 Fazer Novo Cadastro
               </button>
 
-              <p className="text-xs text-gray-500 mt-6">
-                Dúvidas? Entre em contato conosco pelo WhatsApp.
+              <p className="text-xs text-slate-500 mt-6">
+                Dúvidas? Entre em contato com a administração.
               </p>
             </div>
           )}
         </div>
 
         {/* Footer */}
-        <div className="text-center text-white mt-8 text-sm">
-          <p>© 2026 Inteligente Park - Seu estacionamento inteligente</p>
+        <div className="text-center mt-8 space-y-2">
+          <p className="text-slate-500 text-xs">
+            &copy; 2026 Command Park Solutions. Todos os direitos reservados.
+          </p>
         </div>
       </div>
     </div>
