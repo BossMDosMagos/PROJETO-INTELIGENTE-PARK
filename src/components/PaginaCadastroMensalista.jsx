@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Car, CheckCircle, AlertCircle, ArrowRight } from 'lucide-react';
 import { mensalistaService } from '../services/mensalistaService';
+import { supabaseService } from '../services/supabaseService';
 import { audioService } from '../services/audioService';
 
 export function PaginaCadastroMensalista() {
@@ -14,13 +15,30 @@ export function PaginaCadastroMensalista() {
     logoUrl: null
   });
 
-  // Carregar configurações da empresa
+  // Carregar configurações da empresa (Supabase e Local)
   useEffect(() => {
-    const carregarConfig = () => {
+    const carregarConfig = async () => {
       try {
-        const savedConfig = localStorage.getItem('config_empresa');
+        // Tentar buscar do Supabase primeiro
+        if (supabaseService.isOnline) {
+          const { sucesso, dados } = await supabaseService.obterConfiguracoes();
+          if (sucesso && dados) {
+             setConfig({
+               nomeEmpresa: dados.nome_empresa || 'Command Park',
+               logoUrl: dados.logo_url || null
+             });
+             return;
+          }
+        }
+        
+        // Fallback para localStorage (apenas se offline)
+        const savedConfig = localStorage.getItem('park-config');
         if (savedConfig) {
-          setConfig(JSON.parse(savedConfig));
+           const parsed = JSON.parse(savedConfig);
+           setConfig({
+             nomeEmpresa: parsed.nomeEmpresa || 'Command Park',
+             logoUrl: parsed.logoUrl || null
+           });
         }
       } catch (error) {
         console.error('Erro ao carregar config:', error);
@@ -166,37 +184,39 @@ export function PaginaCadastroMensalista() {
       </div>
 
       <div className="w-full max-w-lg relative z-10">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <div className="flex justify-center mb-6">
-            <div className="w-24 h-24 bg-gradient-to-br from-violet-600 to-indigo-600 rounded-2xl flex items-center justify-center shadow-2xl shadow-violet-500/20 border border-white/10 p-4">
+        
+        {/* Header - LOGO e NOME da Empresa */}
+        <div className="text-center mb-10">
+          <div className="relative inline-block mb-6 group">
+            <div className="absolute -inset-1 bg-gradient-to-r from-cyan-500 to-violet-500 rounded-2xl blur opacity-30 group-hover:opacity-60 transition duration-500"></div>
+            <div className="relative w-28 h-28 bg-[#0F172A] rounded-2xl flex items-center justify-center border border-slate-700/50 shadow-2xl overflow-hidden p-4">
               {config.logoUrl ? (
                 <img 
                   src={config.logoUrl} 
                   alt="Logo Empresa" 
-                  className="w-full h-full object-contain filter drop-shadow-lg"
+                  className="w-full h-full object-contain"
                 />
               ) : (
-                <Car className="w-12 h-12 text-white" />
+                 <Car className="w-12 h-12 text-cyan-400" />
               )}
             </div>
           </div>
-          <h1 className="text-3xl font-bold mb-2 text-white tracking-tight">
+          
+          <h1 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-400 tracking-tight mb-2">
             {config.nomeEmpresa || 'Command Park'}
           </h1>
-          <p className="text-slate-400 text-lg">Cadastro de Mensalista</p>
+          <p className="text-cyan-400/80 font-medium tracking-wide uppercase text-sm">Sistema de Cadastramento Seguro</p>
         </div>
 
         {/* Card Principal */}
-        <div className="bg-[#1E293B]/60 backdrop-blur-xl border border-slate-700/50 rounded-3xl shadow-2xl overflow-hidden">
+        <div className="bg-[#1E293B]/40 backdrop-blur-xl border border-white/10 rounded-3xl shadow-[0_0_50px_rgba(0,0,0,0.3)] overflow-hidden">
           {passo === 1 ? (
             /* PASSO 1: FORMULÁRIO */
             <div className="p-8">
-              <div className="mb-8">
-                <p className="text-slate-400 text-center leading-relaxed">
-                  Preencha seus dados abaixo para registrar seu veículo. 
-                  <br />
-                  <span className="text-cyan-400 font-semibold">Rápido, fácil e seguro! 🚀</span>
+              <div className="text-center mb-8">
+                <h2 className="text-xl font-bold text-white mb-2">Cadastro de Mensalista</h2>
+                <p className="text-slate-400 text-sm leading-relaxed">
+                  Preencha seus dados abaixo para registrar seu veículo no sistema <span className="text-white font-semibold">{config.nomeEmpresa}</span>.
                 </p>
               </div>
 
@@ -393,9 +413,15 @@ export function PaginaCadastroMensalista() {
         </div>
 
         {/* Footer */}
-        <div className="text-center mt-8 space-y-2">
-          <p className="text-slate-500 text-xs">
-            &copy; 2026 Command Park Solutions. Todos os direitos reservados.
+        <div className="text-center mt-12 space-y-3 opacity-60 hover:opacity-100 transition-opacity">
+           <div className="flex items-center justify-center gap-2 mb-2">
+              <div className="w-8 h-8 bg-slate-800 rounded-lg flex items-center justify-center border border-slate-700">
+                <span className="text-cyan-400 font-bold text-xs">CP</span>
+              </div>
+              <span className="text-slate-300 font-bold tracking-tight">Command Park</span>
+           </div>
+          <p className="text-slate-500 text-[10px] uppercase tracking-widest">
+            Tecnologia de Gestão Inteligente
           </p>
         </div>
       </div>
