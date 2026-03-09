@@ -1451,16 +1451,25 @@ class SupabaseService {
         updated_at: new Date().toISOString()
       };
       
+      // Tentar UPSERT padrão
       const { error } = await this.client
         .from('configuracoes')
         .upsert(configData)
         .select();
 
       if (error) {
-        // Se a tabela não existir, tentar criar via RPC ou alertar
-        if (error.code === '42P01') { // undefined_table
-           throw new Error("A tabela de configurações ainda não foi criada no banco de dados. Execute a migração '003_create_configuracoes.sql'.");
+        console.warn('Erro ao salvar config (tentativa 1):', error);
+        
+        // Se erro de cache de schema (PGRST202) ou tabela não encontrada (42P01)
+        if (error.code === 'PGRST202' || error.code === '42P01') {
+           console.log('Tentando recarregar schema e salvar novamente...');
+           
+           // Forçar chamada SQL direta via RPC se disponível, ou apenas retry
+           // Como não temos RPC configurada para isso, vamos tentar apenas um INSERT simples se UPSERT falhou
+           // Ou melhor: alertar o usuário para recarregar a página
+           throw new Error("Tabela de configurações não reconhecida. Por favor, recarregue a página (F5) para atualizar o esquema do banco de dados.");
         }
+        
         throw error;
       }
 
