@@ -29,6 +29,9 @@ import { mensalistaService } from './services/mensalistaService';
 import { audioService } from './services/audioService';
 import { syncService } from './services/syncService';
 import { supabaseService } from './services/supabaseService';
+import ProLayout from './pro/ProLayout.jsx';
+import MasterDashboard from './pro/MasterDashboard.jsx';
+import OperatorDashboard from './pro/OperatorDashboard.jsx';
 import { 
   Car, 
   Clock, 
@@ -3753,6 +3756,22 @@ ${'='.repeat(50)}
         }} isDesktop />
       </div>
       <div className="ml-0 md:ml-64 max-w-6xl mx-auto px-4">
+        <ProLayout>
+          {String(usuarioAutenticado?.nivelAcesso || '').toUpperCase() === 'MASTER' ? (
+            <MasterDashboard
+              unidades={[]}
+              ocupacao={{}}
+              bi={{
+                faturamento: historico.reduce((sum, r) => sum + (Number(r.valor) || 0), 0),
+                ocupacaoGlobal: Math.min(100, Math.round((veiculos.length / 100) * 100))
+              }}
+            />
+          ) : (
+            <OperatorDashboard>
+              {/* Reuso do formulário de Registrar Entrada já existente abaixo */}
+            </OperatorDashboard>
+          )}
+        </ProLayout>
         {/* ALERTA DE MENSALISTA ATIVO */}
         {showAlertaMensalista && (
           <div className="mb-6 bg-gradient-to-r from-emerald-400 to-green-500 border-4 border-white rounded-xl p-6 shadow-2xl animate-pulse">
