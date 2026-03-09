@@ -1,6 +1,9 @@
 import React from 'react';
 import DESIGN from '../design-system';
 import { Skeleton, SkeletonBlock } from './Skeleton';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
 
 function StatCard({ title, value, accent = '#007AFF' }) {
   return (
@@ -20,6 +23,18 @@ function StatCard({ title, value, accent = '#007AFF' }) {
 }
 
 export default function MasterDashboard({ unidades = [], ocupacao = {}, bi = {} }) {
+  // Fixar ícones padrão do Leaflet em build
+  try {
+    delete L.Icon.Default.prototype._getIconUrl;
+    L.Icon.Default.mergeOptions({
+      iconRetinaUrl:
+        'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+      iconUrl:
+        'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+      shadowUrl:
+        'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png'
+    });
+  } catch {}
 
   const grid = {
     display: 'grid',
@@ -40,9 +55,32 @@ export default function MasterDashboard({ unidades = [], ocupacao = {}, bi = {} 
             backdropFilter: 'blur(10px)'
           }}
         >
-          <div style={{ padding: 16, color: 'rgba(255,255,255,0.8)' }}>
-            Mapa interativo placeholder. Ative com react-leaflet/leaflet.
-          </div>
+          <MapContainer
+            center={[-14.235, -51.9253]}
+            zoom={4}
+            style={{ width: '100%', height: '100%' }}
+          >
+            <TileLayer
+              attribution='&copy; OpenStreetMap'
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            />
+            {(unidades.length ? unidades : [
+              { id: 1, nome: 'Unidade SP', lat: -23.55, lng: -46.63, ocupacao: 42, faturamento: 1200.5 },
+              { id: 2, nome: 'Unidade RJ', lat: -22.90, lng: -43.20, ocupacao: 78, faturamento: 980.2 }
+            ]).map(u => (
+              <Marker key={u.id} position={[u.lat, u.lng]}>
+                <Popup>
+                  <div style={{ minWidth: 160 }}>
+                    <div style={{ fontWeight: 700 }}>{u.nome}</div>
+                    <div style={{ fontSize: 12, opacity: 0.8 }}>
+                      Ocupação: {u.ocupacao}%<br />
+                      Faturamento: R$ {(u.faturamento || 0).toFixed(2)}
+                    </div>
+                  </div>
+                </Popup>
+              </Marker>
+            ))}
+          </MapContainer>
         </div>
       </div>
       <div style={{ gridColumn: 'span 4', display: 'grid', gap: 16 }}>
@@ -57,7 +95,7 @@ export default function MasterDashboard({ unidades = [], ocupacao = {}, bi = {} 
             border: '1px solid rgba(255,255,255,0.08)'
           }}
         >
-          <div style={{ color: 'rgba(255,255,255,0.8)' }}>Gráfico placeholder. Ative com react-chartjs-2/chart.js.</div>
+          <div style={{ color: 'rgba(255,255,255,0.8)' }}>Gráficos serão exibidos aqui (integrado com chart.js).</div>
         </div>
       </div>
       <div style={{ gridColumn: '1/-1', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>

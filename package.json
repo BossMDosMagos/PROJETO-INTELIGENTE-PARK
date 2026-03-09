@@ -25,13 +25,17 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.98.0",
+    "chart.js": "^4.5.1",
     "dotenv": "^17.3.1",
     "esc-pos-encoder": "^3.0.0",
     "framer-motion": "^12.35.0",
+    "leaflet": "^1.9.4",
     "lucide-react": "^0.344.0",
     "qrcode": "^1.5.4",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-chartjs-2": "^5.3.1",
+    "react-dom": "^18.3.1",
+    "react-leaflet": "^4.2.1"
   },
   "devDependencies": {
     "@types/react": "^18.3.1",
