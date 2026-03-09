@@ -32,14 +32,15 @@ export default function ProLayout({ children, onAdmin, onLogout, onToggleMap, un
     <div
       style={{
         minHeight: '100vh',
-        backgroundColor: '#0F172A',
+        backgroundColor: DESIGN.colors.deepMidnight.DEFAULT, // Deep Midnight Base
         backgroundImage: fullScreen ? 'none' : 
-          'radial-gradient(1000px 500px at 10% 0%, rgba(0,122,255,0.08) 0%, transparent 60%), radial-gradient(800px 400px at 90% 20%, rgba(0,122,255,0.06) 0%, transparent 60%)',
+          `radial-gradient(circle at 50% 0%, ${DESIGN.colors.deepMidnight.light} 0%, ${DESIGN.colors.deepMidnight.DEFAULT} 80%)`, // Gradiente sutil
         color: 'white',
         paddingTop: fullScreen ? 0 : 16,
         paddingLeft: fullScreen ? 0 : 16,
         paddingRight: fullScreen ? 0 : 16,
-        overflow: fullScreen ? 'hidden' : 'auto'
+        overflow: fullScreen ? 'hidden' : 'auto',
+        fontFamily: DESIGN.typography.family.base
       }}
     >
       <div
@@ -68,9 +69,10 @@ export default function ProLayout({ children, onAdmin, onLogout, onToggleMap, un
             gap: 12,
             padding: '10px 14px',
             borderRadius: 14,
-            background: 'rgba(255,255,255,0.06)',
-            border: '1px solid rgba(255,255,255,0.08)',
-            backdropFilter: 'blur(8px)'
+            background: DESIGN.colors.charcoal.surface, // Charcoal Glass
+            border: `1px solid ${DESIGN.colors.charcoal.border}`,
+            backdropFilter: 'blur(12px)',
+            boxShadow: '0 4px 30px rgba(0, 0, 0, 0.3)' // Sombra sofisticada
           }}
         >
           <div
@@ -78,18 +80,19 @@ export default function ProLayout({ children, onAdmin, onLogout, onToggleMap, un
               width: 36,
               height: 36,
               borderRadius: 12,
-              backgroundImage: 'linear-gradient(135deg, #60a5fa 0%, #007AFF 100%)',
+              backgroundImage: `linear-gradient(135deg, ${DESIGN.colors.richForest.DEFAULT} 0%, ${DESIGN.colors.richForest.accent} 100%)`, // Rich Forest Gradient
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontWeight: 900
+              fontWeight: 900,
+              boxShadow: `0 0 15px ${DESIGN.colors.richForest.DEFAULT}` // Glow effect
             }}
           >
             P
           </div>
           <div style={{ lineHeight: 1 }}>
-            <div style={{ fontWeight: 800, letterSpacing: 0.2 }}>Inteligente Park Pro</div>
-            <div style={{ fontSize: 12, opacity: 0.7 }}>Luxury UI • Glass • Bento</div>
+            <div style={{ fontWeight: 800, letterSpacing: 0.5, color: 'white' }}>RARE GROOVE PARK</div>
+            <div style={{ fontSize: 11, opacity: 0.7, color: DESIGN.colors.richForest.text, letterSpacing: 1 }}>SECURITY PROTOCOL V3.0</div>
           </div>
         </div>
         )}
@@ -102,14 +105,17 @@ export default function ProLayout({ children, onAdmin, onLogout, onToggleMap, un
                 style={{
                   padding: 10,
                   borderRadius: 12,
-                  background: 'rgba(59, 130, 246, 0.2)',
-                  border: '1px solid rgba(59, 130, 246, 0.3)',
-                  color: '#60a5fa',
+                  background: DESIGN.colors.charcoal.surface,
+                  border: `1px solid ${DESIGN.colors.charcoal.border}`,
+                  color: DESIGN.colors.richForest.text,
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center'
+                  justifyContent: 'center',
+                  transition: 'all 0.2s'
                 }}
+                onMouseEnter={(e) => e.currentTarget.style.borderColor = DESIGN.colors.richForest.accent}
+                onMouseLeave={(e) => e.currentTarget.style.borderColor = DESIGN.colors.charcoal.border}
                 title={fullScreen ? "Sair do Mapa" : "Abrir Mapa Tático"}
               >
                 <MapIcon size={20} />
@@ -122,14 +128,17 @@ export default function ProLayout({ children, onAdmin, onLogout, onToggleMap, un
                 style={{
                   padding: 10,
                   borderRadius: 12,
-                  background: 'rgba(255,255,255,0.1)',
-                  border: '1px solid rgba(255,255,255,0.1)',
+                  background: DESIGN.colors.charcoal.surface,
+                  border: `1px solid ${DESIGN.colors.charcoal.border}`,
                   color: 'white',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center'
+                  justifyContent: 'center',
+                  transition: 'all 0.2s'
                 }}
+                onMouseEnter={(e) => e.currentTarget.style.borderColor = DESIGN.colors.richForest.accent}
+                onMouseLeave={(e) => e.currentTarget.style.borderColor = DESIGN.colors.charcoal.border}
                 title="Administrativo"
               >
                 <Settings size={20} />

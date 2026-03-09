@@ -999,6 +999,12 @@ class SupabaseService {
       if (atualizacoes.endereco !== undefined) {
         dadosAtualizar.endereco = atualizacoes.endereco?.trim() || null;
       }
+      if (atualizacoes.numero !== undefined) {
+        dadosAtualizar.numero = atualizacoes.numero?.trim() || null;
+      }
+      if (atualizacoes.cep !== undefined) {
+        dadosAtualizar.cep = atualizacoes.cep?.trim() || null;
+      }
       if (atualizacoes.cidade !== undefined) {
         dadosAtualizar.cidade = atualizacoes.cidade?.trim() || null;
       }
@@ -1016,6 +1022,12 @@ class SupabaseService {
       }
       if (atualizacoes.descricao !== undefined) {
         dadosAtualizar.descricao = atualizacoes.descricao?.trim() || null;
+      }
+      if (atualizacoes.latitude !== undefined) {
+        dadosAtualizar.latitude = atualizacoes.latitude;
+      }
+      if (atualizacoes.longitude !== undefined) {
+        dadosAtualizar.longitude = atualizacoes.longitude;
       }
       if (atualizacoes.ativo !== undefined) {
         dadosAtualizar.ativo = Boolean(atualizacoes.ativo);

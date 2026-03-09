@@ -2,6 +2,7 @@
  * DESIGN SYSTEM - Inteligente Park Estacionamentos
  * Paleta de cores, tipografia, espaçamento e componentes padrão
  * Mantém consistência visual em toda a aplicação
+ * Tema Atualizado: Rare Groove Radical
  */
 
 export const DESIGN = {
@@ -9,18 +10,41 @@ export const DESIGN = {
   // PALETA DE CORES
   // ========================================
   colors: {
-    // Primária: Azul profissional
+    // Primária: Azul profissional (Mantida para compatibilidade, mas o tema principal muda)
     primary: {
-      50: '#f0f7ff',    // Mais claro
+      50: '#f0f7ff',
       100: '#e0efff',
       200: '#bae3ff',
       300: '#7ab8ff',
-      400: '#3b82f6',   // Cor principal
-      500: '#1e40af',   // Variação mais escura
+      400: '#3b82f6',
+      500: '#1e40af',
       600: '#1d3a8a',
       700: '#1e3a8a',
       800: '#1e3a8a',
       900: '#172554'
+    },
+
+    // TEMA RARE GROOVE RADICAL
+    // Deep Midnight: Fundo principal (Autoridade e Tecnologia)
+    deepMidnight: {
+      DEFAULT: '#050A14', // Mais escuro que slate-900
+      light: '#0B1120',   // Levemente mais claro
+      dark: '#02040A'     // Quase preto absoluto
+    },
+
+    // Charcoal Gray: Painéis e Cards (Modernidade e Minimalismo)
+    charcoal: {
+      DEFAULT: '#1E293B', // Slate 800 base
+      surface: 'rgba(30, 41, 59, 0.7)', // Glassmorphism base
+      border: 'rgba(255, 255, 255, 0.1)', // Bordas sutis
+      hover: 'rgba(255, 255, 255, 0.05)'
+    },
+
+    // Rich Forest: Acentos e Exclusividade (Verde Petróleo Escuro)
+    richForest: {
+      DEFAULT: '#064E3B', // Emerald 900 base
+      accent: '#10B981',  // Emerald 500 para brilho/glow
+      text: '#A7F3D0'     // Emerald 200 para texto em destaque
     },
 
     // Secundária: Verde (sucesso/sincronizado)
@@ -29,7 +53,7 @@ export const DESIGN = {
       100: '#dcfce7',
       200: '#bbf7d0',
       300: '#86efac',
-      400: '#22c55e',   // Verde principal
+      400: '#22c55e',
       500: '#16a34a',
       600: '#15803d',
       700: '#15803d',
@@ -43,7 +67,7 @@ export const DESIGN = {
       100: '#ffedd5',
       200: '#fed7aa',
       300: '#fdba74',
-      400: '#fb923c',   // Laranja principal
+      400: '#fb923c',
       500: '#f97316',
       600: '#ea580c',
       700: '#c2410c',
@@ -58,7 +82,7 @@ export const DESIGN = {
       200: '#fecaca',
       300: '#fca5a5',
       400: '#f87171',
-      500: '#ef4444',   // Vermelho principal
+      500: '#ef4444',
       600: '#dc2626',
       700: '#b91c1c',
       800: '#991b1b',
@@ -67,16 +91,16 @@ export const DESIGN = {
 
     // Neutros: Cinzas profissionais
     neutral: {
-      50: '#f9fafb',    // Quase branco
-      100: '#f3f4f6',   // Fundo claro
-      200: '#e5e7eb',   // Bordas leves
-      300: '#d1d5db',   // Bordas
-      400: '#9ca3af',   // Texto secundário
-      500: '#6b7280',   // Texto terciário
-      600: '#4b5563',   // Texto principal (dark)
-      700: '#374151',   // Título
-      800: '#1f2937',   // Texto escuro
-      900: '#111827'    // Preto profissional
+      50: '#f9fafb',
+      100: '#f3f4f6',
+      200: '#e5e7eb',
+      300: '#d1d5db',
+      400: '#9ca3af',
+      500: '#6b7280',
+      600: '#4b5563',
+      700: '#374151',
+      800: '#1f2937',
+      900: '#111827'
     },
 
     // Funcional

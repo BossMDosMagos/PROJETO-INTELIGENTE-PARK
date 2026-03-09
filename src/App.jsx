@@ -1545,15 +1545,21 @@ ${'='.repeat(50)}
 
   const limparFormularioPatio = () => {
     setFormPatio({
+      id: null,
       nome: '',
+      cep: '',
       endereco: '',
+      numero: '',
       cidade: '',
       estado: '',
       qtd_vagas: '',
       telefone: '',
       email: '',
-      descricao: ''
+      descricao: '',
+      latitude: '',
+      longitude: ''
     });
+    setTipoLocalizacao('endereco');
   };
 
   // Login admin
