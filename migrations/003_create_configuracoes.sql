@@ -21,14 +21,23 @@ ON CONFLICT (id) DO NOTHING;
 ALTER TABLE configuracoes ENABLE ROW LEVEL SECURITY;
 
 -- Permitir leitura pública (para página de cadastro)
+DROP POLICY IF EXISTS "Leitura pública de configurações" ON configuracoes;
 CREATE POLICY "Leitura pública de configurações" 
 ON configuracoes FOR SELECT 
 TO anon, authenticated 
 USING (true);
 
 -- Permitir atualização apenas para autenticados (admin)
+DROP POLICY IF EXISTS "Atualização restrita de configurações" ON configuracoes;
 CREATE POLICY "Atualização restrita de configurações" 
 ON configuracoes FOR UPDATE 
 TO authenticated 
 USING (true)
+WITH CHECK (true);
+
+-- Permitir inserção apenas para autenticados (admin)
+DROP POLICY IF EXISTS "Inserção restrita de configurações" ON configuracoes;
+CREATE POLICY "Inserção restrita de configurações" 
+ON configuracoes FOR INSERT 
+TO authenticated 
 WITH CHECK (true);

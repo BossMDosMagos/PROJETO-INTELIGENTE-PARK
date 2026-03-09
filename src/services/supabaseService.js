@@ -1437,8 +1437,19 @@ class SupabaseService {
     }
 
     try {
-      // Garantir que ID seja 1
-      const configData = { ...dados, id: 1, updated_at: new Date().toISOString() };
+      // Mapear campos do frontend para colunas do banco
+      const configData = {
+        id: 1,
+        nome_empresa: dados.nomeEmpresa,
+        cnpj: dados.cnpj,
+        endereco: dados.endereco,
+        telefone: dados.telefone,
+        logo_url: dados.logoUrl,
+        valor_hora: dados.valorHora,
+        tolerancia_minutos: dados.toleranciaMinutos,
+        valor_caixa_inicial: dados.valorCaixaInicial,
+        updated_at: new Date().toISOString()
+      };
       
       const { error } = await this.client
         .from('configuracoes')
@@ -1446,6 +1457,10 @@ class SupabaseService {
         .select();
 
       if (error) {
+        // Se a tabela não existir, tentar criar via RPC ou alertar
+        if (error.code === '42P01') { // undefined_table
+           throw new Error("A tabela de configurações ainda não foi criada no banco de dados. Execute a migração '003_create_configuracoes.sql'.");
+        }
         throw error;
       }
 
