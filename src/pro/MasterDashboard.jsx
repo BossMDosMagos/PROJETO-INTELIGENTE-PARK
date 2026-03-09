@@ -1,9 +1,21 @@
 import React from 'react';
 import DESIGN from '../design-system';
 import { Skeleton, SkeletonBlock } from './Skeleton';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, CircleMarker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
+import { Line } from 'react-chartjs-2';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Tooltip,
+  Legend
+} from 'chart.js';
+
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend);
 
 function StatCard({ title, value, accent = '#007AFF' }) {
   return (
@@ -35,6 +47,17 @@ export default function MasterDashboard({ unidades = [], ocupacao = {}, bi = {} 
         'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png'
     });
   } catch {}
+
+  const getColor = (pct) => {
+    if (pct <= 50) return '#22c55e';
+    if (pct <= 90) return '#f59e0b';
+    return '#ef4444';
+  };
+
+  const trend = bi?.trend || {
+    labels: ['D-6', 'D-5', 'D-4', 'D-3', 'D-2', 'D-1', 'Hoje'],
+    data: [0, 0, 0, 0, 0, 0, 0]
+  };
 
   const grid = {
     display: 'grid',
@@ -68,7 +91,12 @@ export default function MasterDashboard({ unidades = [], ocupacao = {}, bi = {} 
               { id: 1, nome: 'Unidade SP', lat: -23.55, lng: -46.63, ocupacao: 42, faturamento: 1200.5 },
               { id: 2, nome: 'Unidade RJ', lat: -22.90, lng: -43.20, ocupacao: 78, faturamento: 980.2 }
             ]).map(u => (
-              <Marker key={u.id} position={[u.lat, u.lng]}>
+              <CircleMarker
+                key={u.id}
+                center={[u.lat, u.lng]}
+                radius={10}
+                pathOptions={{ color: getColor(u.ocupacao || 0), fillColor: getColor(u.ocupacao || 0), fillOpacity: 0.9 }}
+              >
                 <Popup>
                   <div style={{ minWidth: 160 }}>
                     <div style={{ fontWeight: 700 }}>{u.nome}</div>
@@ -78,7 +106,7 @@ export default function MasterDashboard({ unidades = [], ocupacao = {}, bi = {} 
                     </div>
                   </div>
                 </Popup>
-              </Marker>
+              </CircleMarker>
             ))}
           </MapContainer>
         </div>
@@ -95,7 +123,33 @@ export default function MasterDashboard({ unidades = [], ocupacao = {}, bi = {} 
             border: '1px solid rgba(255,255,255,0.08)'
           }}
         >
-          <div style={{ color: 'rgba(255,255,255,0.8)' }}>Gráficos serão exibidos aqui (integrado com chart.js).</div>
+          <Line
+            data={{
+              labels: trend.labels,
+              datasets: [
+                {
+                  label: 'Faturamento',
+                  data: trend.data,
+                  tension: 0.35,
+                  borderColor: '#007AFF',
+                  backgroundColor: 'rgba(0,122,255,0.25)',
+                  pointRadius: 3,
+                  fill: true
+                }
+              ]
+            }}
+            options={{
+              responsive: true,
+              plugins: {
+                legend: { labels: { color: 'rgba(255,255,255,0.85)' } },
+                tooltip: { mode: 'index', intersect: false }
+              },
+              scales: {
+                x: { ticks: { color: 'rgba(255,255,255,0.7)' }, grid: { color: 'rgba(255,255,255,0.08)' } },
+                y: { ticks: { color: 'rgba(255,255,255,0.7)' }, grid: { color: 'rgba(255,255,255,0.08)' } }
+              }
+            }}
+          />
         </div>
       </div>
       <div style={{ gridColumn: '1/-1', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>

@@ -1809,6 +1809,23 @@ ${'='.repeat(50)}
     [historico]
   );
 
+  const biTrend = useMemo(() => {
+    const today = new Date();
+    const days = [...Array(7)].map((_, i) => {
+      const d = new Date(today);
+      d.setDate(today.getDate() - (6 - i));
+      return d;
+    });
+    const fmt = (d) => d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+    const labels = days.map(fmt);
+    const sums = days.map((d) => {
+      const key = d.toISOString().split('T')[0];
+      return historico
+        .filter((h) => new Date(h.saida).toISOString().startsWith(key))
+        .reduce((s, h) => s + (h.valor || 0), 0);
+    });
+    return { labels, data: sums };
+  }, [historico]);
   const totalArrecadadoDia = useMemo(() => {
     const dataAtualISO = new Date().toISOString().split('T')[0];
     const registrosDoDia = historico.filter((reg) => {
@@ -3763,7 +3780,8 @@ ${'='.repeat(50)}
               ocupacao={{}}
               bi={{
                 faturamento: historico.reduce((sum, r) => sum + (Number(r.valor) || 0), 0),
-                ocupacaoGlobal: Math.min(100, Math.round((veiculos.length / 100) * 100))
+                ocupacaoGlobal: Math.min(100, Math.round((veiculos.length / 100) * 100)),
+                trend: biTrend
               }}
             />
           ) : (
