@@ -80,51 +80,8 @@ export default defineConfig({
         drop_debugger: true
       }
     },
-    // Code splitting estratégico
-    rollupOptions: {
-      output: {
-        manualChunks: (id) => {
-          // Vendor libraries
-          if (id.includes('node_modules/react')) {
-            return 'vendor-react';
-          }
-          if (id.includes('node_modules/framer-motion')) {
-            return 'vendor-animations';
-          }
-          if (id.includes('node_modules/lucide-react')) {
-            return 'vendor-lucide';
-          }
-          
-          // Components grouping
-          if (id.includes('src/components')) {
-            if (id.includes('Table.jsx') || id.includes('SearchBar.jsx') || id.includes('FilterBar.jsx')) {
-              return 'components-tables';
-            }
-            if (id.includes('AnimationManager.jsx')) {
-              return 'components-animations';
-            }
-            return 'components-ui';
-          }
-          
-          // Services layer
-          if (id.includes('src/services')) {
-            return 'services';
-          }
-          
-          // Hooks layer
-          if (id.includes('src/hooks')) {
-            return 'hooks';
-          }
-          
-          // Utils layer
-          if (id.includes('src/utils')) {
-            return 'utils';
-          }
-        }
-      }
-    },
-    // Chunk size warning threshold
-    chunkSizeWarningLimit: 600,
+    // Code splitting simplificado (automático)
+    chunkSizeWarningLimit: 800,
     
     // Source map apenas em development
     sourcemap: process.env.NODE_ENV === 'development',
