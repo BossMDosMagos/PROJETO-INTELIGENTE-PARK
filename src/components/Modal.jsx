@@ -145,7 +145,8 @@ export function Modal({
         `}
         style={{
           maxWidth,
-          animation: 'slideUp 0.3s ease-out'
+          animation: 'slideUp 0.3s ease-out',
+          backgroundColor: className.includes('bg-') ? undefined : 'white'
         }}
         onClick={(e) => e.stopPropagation()}
         {...otherProps}

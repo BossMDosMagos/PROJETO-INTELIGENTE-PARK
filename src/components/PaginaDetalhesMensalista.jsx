@@ -368,13 +368,6 @@ export function PaginaDetalhesMensalista({ mensalistaId, onVoltar, onAtualizar }
             </div>
           )}
         </div>
-      </div>
-    </div>
-  );
-};
-            </div>
-          )}
-        </div>
 
         {/* Card de Datas */}
         <div className="bg-[#1E293B]/40 backdrop-blur-xl border border-slate-800 rounded-2xl p-6 shadow-xl relative overflow-hidden group">
