@@ -442,16 +442,12 @@ function App() {
         onClose={() => setShowModalControleCaixa(false)}
         title="Controle de Caixa"
         size="md"
+        className="bg-[#050A14] text-white border border-slate-800"
       >
         {!caixaAberto ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: DESIGN.spacing.md }}>
+          <div className="space-y-6">
             <div>
-              <label style={{
-                display: 'block',
-                fontSize: '0.875rem',
-                fontWeight: 600,
-                marginBottom: DESIGN.spacing.sm
-              }}>
+              <label className="block text-sm font-bold text-slate-400 mb-2 uppercase tracking-wider">
                 Valor Inicial do Caixa (R$)
               </label>
               <Input
@@ -462,70 +458,55 @@ function App() {
                 placeholder="300.00"
                 min="0"
                 autoFocus
+                className="bg-[#0F172A] border-slate-700 text-white placeholder-slate-500 focus:border-cyan-500 text-2xl font-mono text-center py-4"
               />
             </div>
-            <p style={{
-              fontSize: '0.875rem',
-              color: DESIGN.colors.neutral[600],
-              textAlign: 'center'
-            }}>
-              Este é o fundo de troco inicial.
+            <p className="text-sm text-slate-500 text-center">
+              Este é o fundo de troco inicial para o turno.
             </p>
-            <div style={{ display: 'flex', gap: DESIGN.spacing.sm }}>
-              <Button
-                variant="primary"
-                fullWidth
+            <div className="flex gap-3">
+              <button
                 onClick={abrirCaixa}
+                className="flex-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-emerald-900/20 active:scale-95"
               >
                 ✓ Abrir Caixa
-              </Button>
-              <Button
-                variant="secondary"
-                fullWidth
+              </button>
+              <button
                 onClick={() => setShowModalControleCaixa(false)}
+                className="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-bold py-4 rounded-xl transition-all active:scale-95"
               >
                 Cancelar
-              </Button>
+              </button>
             </div>
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: DESIGN.spacing.md }}>
-            <div style={{
-              backgroundColor: DESIGN.colors.success[50],
-              border: `1px solid ${DESIGN.colors.success[300]}`,
-              borderRadius: DESIGN.border.md,
-              padding: DESIGN.spacing.md
-            }}>
-              <p style={{
-                fontSize: '0.875rem',
-                color: DESIGN.colors.success[700],
-                fontWeight: 600
-              }}>
-                ✅ Caixa Aberto
+          <div className="space-y-6">
+            <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-6 text-center">
+              <p className="text-emerald-400 font-bold text-lg flex items-center justify-center gap-2 mb-2">
+                <span className="w-3 h-3 rounded-full bg-emerald-400 animate-pulse"></span>
+                CAIXA ABERTO
               </p>
-              <p style={{
-                fontSize: '1.125rem',
-                fontWeight: 700,
-                color: DESIGN.colors.success[900],
-                marginTop: DESIGN.spacing.sm
-              }}>
-                Aberto há: {dataAberturaCaixa && new Date(dataAberturaCaixa).toLocaleString('pt-BR')}
+              <p className="text-slate-400 text-sm font-mono">
+                Iniciado em: {dataAberturaCaixa && new Date(dataAberturaCaixa).toLocaleString('pt-BR')}
               </p>
             </div>
-            <Button
-              variant="danger"
-              fullWidth
-              onClick={fecharCaixa}
-            >
-              🔐 Fechar Caixa
-            </Button>
-            <Button
-              variant="secondary"
-              fullWidth
-              onClick={() => setShowModalControleCaixa(false)}
-            >
-              Cancelar
-            </Button>
+            
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={fecharCaixa}
+                className="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-red-900/20 active:scale-95 flex items-center justify-center gap-2"
+              >
+                <Lock className="w-5 h-5" />
+                Fechar Caixa
+              </button>
+              
+              <button
+                onClick={() => setShowModalControleCaixa(false)}
+                className="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-4 rounded-xl transition-all active:scale-95"
+              >
+                Voltar
+              </button>
+            </div>
           </div>
         )}
       </Modal>
@@ -546,40 +527,45 @@ function App() {
     } = showRelatorioFechamento;
 
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[100] overflow-y-auto">
-        <div className="bg-white rounded-lg shadow-2xl max-w-2xl w-full p-8 my-8">
-          <h2 className="text-2xl font-bold mb-6 text-center text-blue-900">
-            📋 PRESTAÇÃO DE CONTAS - FECHAMENTO
+      <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-[100] overflow-y-auto">
+        <div className="bg-[#1E293B] border border-slate-700 rounded-2xl shadow-2xl max-w-2xl w-full p-8 my-8 text-slate-200">
+          <h2 className="text-2xl font-bold mb-6 text-center text-cyan-400 flex items-center justify-center gap-2">
+            📋 PRESTAÇÃO DE CONTAS
           </h2>
 
           <div className="space-y-6">
             {/* Header */}
-            <div className="text-center border-b-2 border-gray-300 pb-4">
-              <p className="text-lg font-bold">{config.nomeEmpresa}</p>
-              <p className="text-sm text-gray-600">Abertura: {new Date(dataAbertura).toLocaleString('pt-BR')}</p>
-              <p className="text-sm text-gray-600">Fechamento: {new Date(dataFechamento).toLocaleString('pt-BR')}</p>
+            <div className="text-center border-b border-slate-700 pb-4">
+              <p className="text-lg font-bold text-white">{config.nomeEmpresa}</p>
+              <div className="flex justify-center gap-4 text-sm text-slate-400 mt-2">
+                 <span>Abertura: {new Date(dataAbertura).toLocaleString('pt-BR')}</span>
+                 <span>Fechamento: {new Date(dataFechamento).toLocaleString('pt-BR')}</span>
+              </div>
             </div>
 
             {/* Caixa Inicial */}
-            <div className="bg-blue-50 border border-blue-300 rounded-lg p-4">
-              <p className="text-sm text-gray-600">Caixa Inicial (Fundo de Troco)</p>
-              <p className="text-2xl font-bold text-blue-900">R$ {caixaInicial.toFixed(2)}</p>
+            <div className="bg-cyan-900/10 border border-cyan-500/20 rounded-lg p-4 flex justify-between items-center">
+              <p className="text-sm text-slate-400">Caixa Inicial (Fundo de Troco)</p>
+              <p className="text-2xl font-mono font-bold text-cyan-400">R$ {caixaInicial.toFixed(2)}</p>
             </div>
 
             {/* Movimentação do Dia */}
             <div>
-              <h3 className="font-bold text-gray-800 mb-3">Movimentação do Dia ({registrosDoDia.length} entradas)</h3>
-              <div className="max-h-48 overflow-y-auto space-y-2 bg-gray-50 p-3 rounded-lg">
+              <h3 className="font-bold text-white mb-3 flex items-center gap-2">
+                 Movimentação do Dia 
+                 <span className="text-xs font-normal text-slate-400 bg-slate-800 px-2 py-0.5 rounded-full">{registrosDoDia.length} entradas</span>
+              </h3>
+              <div className="max-h-48 overflow-y-auto space-y-2 bg-[#0F172A] p-3 rounded-lg border border-slate-800 custom-scrollbar">
                 {registrosDoDia.length === 0 ? (
-                  <p className="text-gray-600 text-center py-4">Nenhum registro no dia de hoje.</p>
+                  <p className="text-slate-500 text-center py-4">Nenhum registro no dia de hoje.</p>
                 ) : (
                   registrosDoDia.map((reg, idx) => {
                     const entrada = new Date(reg.entrada).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
                     const saida = new Date(reg.saida).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
                     return (
-                      <div key={idx} className="flex justify-between text-sm border-b border-gray-200 pb-2">
-                        <span>{idx + 1}. {reg.placa} ({entrada}→{saida})</span>
-                        <span className="font-bold">R$ {reg.valor.toFixed(2)}</span>
+                      <div key={idx} className="flex justify-between text-sm border-b border-slate-800 pb-2 last:border-0 text-slate-300">
+                        <span>{idx + 1}. {reg.placa} <span className="text-slate-500">({entrada}→{saida})</span></span>
+                        <span className="font-mono font-bold text-emerald-400">R$ {reg.valor.toFixed(2)}</span>
                       </div>
                     );
                   })
@@ -588,45 +574,48 @@ function App() {
             </div>
 
             {/* Resumo Final - DESTACADO */}
-            <div className="border-2 border-green-500 rounded-lg p-6 bg-green-50">
-              <h3 className="font-bold text-green-900 mb-4 text-center">RESUMO FINAL</h3>
-              <div className="space-y-3">
-                <div className="flex justify-between text-gray-700">
+            <div className="border border-emerald-500/30 rounded-lg p-6 bg-emerald-900/10 relative overflow-hidden">
+              <div className="absolute top-0 right-0 p-4 opacity-10">
+                 <DollarSign className="w-24 h-24 text-emerald-500" />
+              </div>
+              
+              <h3 className="font-bold text-emerald-400 mb-4 text-center text-lg uppercase tracking-widest">RESUMO FINAL</h3>
+              <div className="space-y-3 relative z-10">
+                <div className="flex justify-between text-slate-300">
                   <span>Total de Pagamentos:</span>
-                  <span className="font-bold">R$ {totalArrecadado.toFixed(2)}</span>
+                  <span className="font-mono font-bold text-white">R$ {totalArrecadado.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between text-gray-700">
+                <div className="flex justify-between text-slate-400 text-sm">
                   <span>Menos Caixa Inicial:</span>
-                  <span className="font-bold">-R$ {caixaInicial.toFixed(2)}</span>
+                  <span className="font-mono">- R$ {caixaInicial.toFixed(2)}</span>
                 </div>
-                <div className="border-t-2 border-green-300 pt-3 flex justify-between">
-                  <span className="font-bold text-green-900">VALOR PARA DEPOSITAR:</span>
-                  <span className="text-2xl font-bold text-green-600">R$ {valorDeposito.toFixed(2)}</span>
+                <div className="border-t border-emerald-500/30 pt-3 flex justify-between items-center mt-2">
+                  <span className="font-bold text-emerald-100 uppercase text-sm">Valor para Depositar:</span>
+                  <span className="text-3xl font-mono font-bold text-emerald-400">R$ {valorDeposito.toFixed(2)}</span>
                 </div>
-                <div className="bg-white p-3 rounded border border-green-300 flex justify-between mt-4">
-                  <span className="font-bold text-gray-800">Total em Caixa:</span>
-                  <span className="text-xl font-bold text-blue-900">R$ {totalCaixa.toFixed(2)}</span>
+                
+                <div className="bg-[#0F172A] p-4 rounded-lg border border-slate-700 flex justify-between items-center mt-4">
+                  <span className="font-bold text-slate-300">Total Físico em Caixa:</span>
+                  <span className="text-xl font-mono font-bold text-white">R$ {totalCaixa.toFixed(2)}</span>
                 </div>
               </div>
             </div>
 
             {/* Botões */}
-            <div style={{ display: 'flex', gap: DESIGN.spacing.sm }}>
-              <Button
-                variant="primary"
-                fullWidth
+            <div className="flex gap-3">
+              <button
                 onClick={imprimirRelatorioFechamento}
+                className="flex-1 bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-cyan-900/20 active:scale-95 flex items-center justify-center gap-2"
               >
-                <Printer className="w-5 h-5" style={{ marginRight: DESIGN.spacing.xs }} />
+                <Printer className="w-5 h-5" />
                 Imprimir Relatório
-              </Button>
-              <Button
-                variant="secondary"
-                fullWidth
+              </button>
+              <button
                 onClick={() => setShowRelatorioFechamento(false)}
+                className="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-xl transition-all active:scale-95"
               >
                 Fechar
-              </Button>
+              </button>
             </div>
           </div>
         </div>

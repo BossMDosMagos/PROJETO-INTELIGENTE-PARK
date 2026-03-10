@@ -123,17 +123,7 @@ export function Modal({
 
   return (
     <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: DESIGN.zIndex.modal,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        padding: `${DESIGN.spacing.md}px`,
-        animation: 'fadeIn 0.2s ease-in-out'
-      }}
+      className="fixed inset-0 z-[1300] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200"
       onClick={(e) => {
         if (closeOnBackdrop && e.target === e.currentTarget) {
           onClose?.();
@@ -147,44 +137,26 @@ export function Modal({
         aria-modal="true"
         aria-labelledby={title ? 'modal-title' : undefined}
         aria-describedby={subtitle ? 'modal-subtitle' : undefined}
+        className={`
+          relative w-full max-h-[90vh] flex flex-col overflow-hidden shadow-2xl transition-all
+          rounded-xl
+          ${className.includes('bg-') ? '' : 'bg-white text-slate-900'}
+          ${className}
+        `}
         style={{
-          backgroundColor: 'white',
-          borderRadius: DESIGN.border.radius.lg,
-          boxShadow: DESIGN.shadow.xl,
           maxWidth,
-          width: '100%',
-          maxHeight: '90vh',
-          overflow: 'hidden',
-          display: 'flex',
-          flexDirection: 'column',
           animation: 'slideUp 0.3s ease-out'
         }}
         onClick={(e) => e.stopPropagation()}
-        className={className}
         {...otherProps}
       >
         {/* Modal Header */}
-        <div
-          style={{
-            padding: `${DESIGN.spacing.lg}px`,
-            borderBottom: `1px solid ${DESIGN.colors.neutral[200]}`,
-            display: 'flex',
-            alignItems: 'flex-start',
-            justifyContent: 'space-between',
-            gap: `${DESIGN.spacing.md}px`
-          }}
-        >
-          <div style={{ flex: 1 }}>
+        <div className={`p-6 flex items-start justify-between gap-4 border-b ${className.includes('text-white') ? 'border-white/10' : 'border-slate-200'}`}>
+          <div className="flex-1">
             {title && (
               <h2
                 id="modal-title"
-                style={{
-                  margin: 0,
-                  marginBottom: subtitle ? `${DESIGN.spacing.xs}px` : 0,
-                  fontSize: DESIGN.typography.sizes.xl,
-                  fontWeight: '700',
-                  color: DESIGN.colors.neutral[900]
-                }}
+                className={`text-xl font-bold m-0 ${subtitle ? 'mb-1' : ''} ${className.includes('text-white') ? 'text-white' : 'text-slate-900'}`}
               >
                 {title}
               </h2>
@@ -192,11 +164,7 @@ export function Modal({
             {subtitle && (
               <p
                 id="modal-subtitle"
-                style={{
-                  margin: 0,
-                  fontSize: DESIGN.typography.sizes.sm,
-                  color: DESIGN.colors.neutral[600]
-                }}
+                className={`text-sm m-0 ${className.includes('text-white') ? 'text-slate-400' : 'text-slate-500'}`}
               >
                 {subtitle}
               </p>
@@ -206,33 +174,12 @@ export function Modal({
           {/* Close Button */}
           <button
             onClick={onClose}
-            style={{
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              fontSize: '24px',
-              color: DESIGN.colors.neutral[400],
-              padding: 0,
-              width: '32px',
-              height: '32px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              borderRadius: DESIGN.border.radius.sm,
-              transition: `all ${DESIGN.transition.fast}`,
-              ':hover': {
-                backgroundColor: DESIGN.colors.neutral[100],
-                color: DESIGN.colors.neutral[600]
-              }
-            }}
-            onMouseEnter={(e) => {
-              e.target.style.backgroundColor = DESIGN.colors.neutral[100];
-              e.target.style.color = DESIGN.colors.neutral[600];
-            }}
-            onMouseLeave={(e) => {
-              e.target.style.backgroundColor = 'transparent';
-              e.target.style.color = DESIGN.colors.neutral[400];
-            }}
+            className={`
+              bg-transparent border-none cursor-pointer p-0 w-8 h-8 flex items-center justify-center rounded-lg transition-colors
+              ${className.includes('text-white') 
+                ? 'text-slate-400 hover:bg-white/10 hover:text-white' 
+                : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600'}
+            `}
             aria-label="Close modal"
           >
             ✕
@@ -240,40 +187,19 @@ export function Modal({
         </div>
 
         {/* Modal Body */}
-        <div
-          style={{
-            padding: `${DESIGN.spacing.lg}px`,
-            overflow: 'auto',
-            flex: 1,
-            color: DESIGN.colors.neutral[900]
-          }}
-        >
+        <div className={`p-6 overflow-y-auto flex-1 ${className.includes('text-white') ? 'text-slate-200' : 'text-slate-700'}`}>
           {children}
         </div>
 
         {/* Modal Footer */}
         {footer && (
-          <div
-            style={{
-              padding: `${DESIGN.spacing.lg}px`,
-              borderTop: `1px solid ${DESIGN.colors.neutral[200]}`,
-              display: 'flex',
-              gap: `${DESIGN.spacing.md}px`,
-              justifyContent: 'flex-end',
-              backgroundColor: DESIGN.colors.neutral[50]
-            }}
-          >
+          <div className={`p-6 border-t flex gap-3 justify-end ${className.includes('text-white') ? 'bg-black/20 border-white/10' : 'bg-slate-50 border-slate-200'}`}>
             {footer}
           </div>
         )}
       </div>
 
       <style>{`
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        
         @keyframes slideUp {
           from {
             opacity: 0;
