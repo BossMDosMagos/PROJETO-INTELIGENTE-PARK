@@ -2799,26 +2799,30 @@ ${'='.repeat(50)}
   }
 
   // TELA HOME (OPERACIONAL)
+  const isMaster = String(usuarioAutenticado?.nivelAcesso || '').toUpperCase() === 'MASTER';
+
   return (
     <div className="min-h-screen bg-[#050A14] text-gray-100 pb-20 transition-colors duration-300">
-      <div style={{ position: 'fixed', left: 0, top: 0, bottom: 0, width: '16rem', zIndex: 5 }}>
-        <Sidebar selected="principal" onNavigate={(item) => {
-          if (item === 'operador') { setTela('admin'); setSecaoAdmin('operadores'); }
-          if (item === 'caixa') { setShowModalControleCaixa(true); }
-          if (item === 'entrada') { setAbaHome('patio'); }
-          if (item === 'saida') { setAbaHome('saidas'); }
-          if (item === 'logout') { 
-            supabaseService.logout(); 
-            setUsuarioAutenticado(null);
-            setSenhaInput('');
-            if (!lembrarLogin) {
-              setEmailInput('');
+      {!isMaster && (
+        <div style={{ position: 'fixed', left: 0, top: 0, bottom: 0, width: '16rem', zIndex: 5 }}>
+          <Sidebar selected="principal" onNavigate={(item) => {
+            if (item === 'operador') { setTela('admin'); setSecaoAdmin('operadores'); }
+            if (item === 'caixa') { setShowModalControleCaixa(true); }
+            if (item === 'entrada') { setAbaHome('patio'); }
+            if (item === 'saida') { setAbaHome('saidas'); }
+            if (item === 'logout') { 
+              supabaseService.logout(); 
+              setUsuarioAutenticado(null);
+              setSenhaInput('');
+              if (!lembrarLogin) {
+                setEmailInput('');
+              }
+              setSenhaInput('');
             }
-            setSenhaInput('');
-          }
-        }} isDesktop config={config} />
-      </div>
-      <div className="ml-0 md:ml-64 max-w-6xl mx-auto px-4" style={String(usuarioAutenticado?.nivelAcesso || '').toUpperCase() === 'MASTER' ? { maxWidth: '100%', margin: 0, padding: 0 } : {}}>
+          }} isDesktop config={config} />
+        </div>
+      )}
+      <div className={`transition-all duration-300 ${isMaster ? 'ml-0' : 'ml-0 md:ml-64'} max-w-6xl mx-auto px-4`} style={isMaster ? { maxWidth: '100%', margin: 0, padding: 0 } : {}}>
         <ProLayout
           unidades={unidadesMapa.length > 0 ? unidadesMapa : [{
             id: 'default',
