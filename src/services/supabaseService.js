@@ -1120,50 +1120,40 @@ class SupabaseService {
 
   /**
    * Cria um novo mensalista
-   * @param {Object} mensalista - { nome, cpf, placa, modelo, cor, whatsapp, status }
+   * @param {Object} dados - { nome, cpf, email, placa, renavam, modelo, cor, tipo_veiculo, dia_vencimento, whatsapp, patio_id, status }
    * @returns {Promise<Object>} { sucesso, dados, erro }
    */
-  async criarMensalista({ nome, cpf, placa, modelo = '', cor = '', whatsapp = '', status = 'PENDENTE' }) {
+  async criarMensalista(dados) {
     if (!this.initialized) {
       return { sucesso: false, erro: 'Supabase não inicializado' };
     }
 
-    if (!nome?.trim() || !cpf?.trim() || !placa?.trim()) {
-      return { sucesso: false, erro: 'Nome, CPF e placa são obrigatórios' };
-    }
-
     try {
-      // Verificar se placa já existe
-      const { data: existentes } = await this.client
-        .from('mensalistas')
-        .select('id')
-        .eq('placa', placa.toUpperCase())
-        .limit(1);
-
-      if (existentes && existentes.length > 0) {
-        return { sucesso: false, erro: 'Placa já cadastrada' };
-      }
-
       const { data, error } = await this.client
         .from('mensalistas')
         .insert({
-          nome: String(nome).trim().toUpperCase(),
-          cpf: String(cpf).replace(/\D/g, ''),
-          placa: String(placa).toUpperCase(),
-          modelo: String(modelo).trim().toUpperCase() || null,
-          cor: String(cor).trim().toUpperCase() || null,
-          whatsapp: String(whatsapp).replace(/\D/g, '') || null,
-          status: status.toUpperCase(),
-          data_cadastro: new Date().toISOString(),
-          data_vencimento: null
+          nome: dados.nome,
+          cpf: dados.cpf,
+          email: dados.email,
+          placa: dados.placa,
+          renavam: dados.renavam,
+          modelo: dados.modelo,
+          cor: dados.cor,
+          tipo_veiculo: dados.tipo_veiculo,
+          dia_vencimento: dados.dia_vencimento,
+          whatsapp: dados.whatsapp,
+          patio_id: dados.patio_id,
+          status: dados.status || 'PENDENTE',
+          created_at: new Date().toISOString()
         })
-        .select();
+        .select()
+        .single();
 
       if (error) {
         throw error;
       }
 
-      return { sucesso: true, dados: data?.[0] };
+      return { sucesso: true, dados: data };
     } catch (erro) {
       console.error('❌ Erro ao criar mensalista:', erro);
       return { sucesso: false, erro: erro.message };

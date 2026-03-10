@@ -51,9 +51,13 @@ export function PaginaCadastroMensalista() {
     nome: '',
     cpf: '',
     whatsapp: '',
+    email: '', // Novo campo
     placa: '',
+    renavam: '', // Novo campo
     modelo: '',
-    cor: ''
+    cor: '', // Novo campo (seleção)
+    tipoVeiculo: 'Passeio', // Novo campo (seleção)
+    diaVencimento: '05' // Novo campo (seleção)
   });
 
   // Formatter de entrada
@@ -66,8 +70,13 @@ export function PaginaCadastroMensalista() {
       novoValor = value.toUpperCase();
     }
 
-    // Maiúsculas para modelo e cor
-    if (name === 'modelo' || name === 'cor') {
+    // Apenas números para Renavam
+    if (name === 'renavam') {
+      novoValor = value.replace(/\D/g, '').slice(0, 11);
+    }
+
+    // Maiúsculas para modelo
+    if (name === 'modelo') {
       novoValor = value.toUpperCase();
     }
 
@@ -115,15 +124,37 @@ export function PaginaCadastroMensalista() {
       return false;
     }
 
+    // Validação simples de email (se preenchido)
+    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      setErro('E-mail inválido');
+      return false;
+    }
+
     return true;
   };
 
   // Validar Passo 2 (Dados Veículo)
   const validarPasso2 = () => {
-    if (!formData.placa || formData.placa.length < 3) {
-      setErro('Placa do veículo é obrigatória');
+    if (!formData.placa || formData.placa.length < 7) { // Mínimo 7 caracteres para placa antiga ou Mercosul
+      setErro('Placa do veículo inválida (Mínimo 7 caracteres)');
       return false;
     }
+
+    if (!formData.renavam || formData.renavam.length !== 11) {
+      setErro('Renavam deve ter 11 dígitos numéricos');
+      return false;
+    }
+
+    if (!formData.modelo.trim()) {
+      setErro('Marca/Modelo é obrigatório');
+      return false;
+    }
+
+    if (!formData.cor) {
+      setErro('Selecione a cor do veículo');
+      return false;
+    }
+
     return true;
   };
 
@@ -316,6 +347,21 @@ export function PaginaCadastroMensalista() {
                   </p>
                 </div>
 
+                {/* E-mail (Opcional) */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 ml-1">
+                    E-mail (Opcional)
+                  </label>
+                  <input
+                    type="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    placeholder="seu.email@exemplo.com"
+                    className="w-full px-4 py-3.5 bg-[#0F172A] text-white border border-slate-700 rounded-xl focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 focus:outline-none transition placeholder-slate-600"
+                  />
+                </div>
+
                 {/* Botão Próximo */}
                 <button
                   onClick={proximoPasso}
@@ -346,53 +392,126 @@ export function PaginaCadastroMensalista() {
               )}
 
               <form onSubmit={handleSubmit} className="space-y-5">
-                {/* Placa */}
+                {/* Placa e Renavam */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 ml-1">
+                      Placa *
+                    </label>
+                    <input
+                      type="text"
+                      name="placa"
+                      value={formData.placa}
+                      onChange={handleInputChange}
+                      placeholder="ABC-1234"
+                      className="w-full px-4 py-3.5 bg-[#0F172A] text-white border border-slate-700 rounded-xl focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 focus:outline-none transition font-mono text-lg tracking-widest placeholder-slate-600 uppercase"
+                      maxLength="8"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 ml-1">
+                      Renavam *
+                    </label>
+                    <input
+                      type="text"
+                      name="renavam"
+                      value={formData.renavam}
+                      onChange={handleInputChange}
+                      placeholder="00000000000"
+                      className="w-full px-4 py-3.5 bg-[#0F172A] text-white border border-slate-700 rounded-xl focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 focus:outline-none transition font-mono placeholder-slate-600"
+                      maxLength="11"
+                    />
+                  </div>
+                </div>
+
+                {/* Marca/Modelo */}
                 <div>
                   <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 ml-1">
-                    Placa do Veículo *
+                    Marca / Modelo *
                   </label>
                   <input
                     type="text"
-                    name="placa"
-                    value={formData.placa}
+                    name="modelo"
+                    value={formData.modelo}
                     onChange={handleInputChange}
-                    placeholder="ABC-1234"
-                    className="w-full px-4 py-3.5 bg-[#0F172A] text-white border border-slate-700 rounded-xl focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 focus:outline-none transition font-mono text-lg tracking-widest placeholder-slate-600 uppercase"
-                    maxLength="8"
+                    placeholder="Ex: Toyota Corolla"
+                    className="w-full px-4 py-3.5 bg-[#0F172A] text-white border border-slate-700 rounded-xl focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 focus:outline-none transition placeholder-slate-600 uppercase"
+                    maxLength="40"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
-                  {/* Modelo */}
-                  <div>
-                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 ml-1">
-                      Modelo
-                    </label>
-                    <input
-                      type="text"
-                      name="modelo"
-                      value={formData.modelo}
-                      onChange={handleInputChange}
-                      placeholder="GOL, CIVIC..."
-                      className="w-full px-4 py-3.5 bg-[#0F172A] text-white border border-slate-700 rounded-xl focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 focus:outline-none transition placeholder-slate-600 uppercase"
-                      maxLength="30"
-                    />
-                  </div>
-
                   {/* Cor */}
                   <div>
                     <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 ml-1">
-                      Cor
+                      Cor *
                     </label>
-                    <input
-                      type="text"
+                    <select
                       name="cor"
                       value={formData.cor}
                       onChange={handleInputChange}
-                      placeholder="BRANCO..."
-                      className="w-full px-4 py-3.5 bg-[#0F172A] text-white border border-slate-700 rounded-xl focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 focus:outline-none transition placeholder-slate-600 uppercase"
-                      maxLength="20"
-                    />
+                      className="w-full px-4 py-3.5 bg-[#0F172A] text-white border border-slate-700 rounded-xl focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 focus:outline-none transition"
+                    >
+                      <option value="">Selecione</option>
+                      <option value="BRANCO">Branco</option>
+                      <option value="PRETO">Preto</option>
+                      <option value="PRATA">Prata</option>
+                      <option value="CINZA">Cinza</option>
+                      <option value="VERMELHO">Vermelho</option>
+                      <option value="AZUL">Azul</option>
+                      <option value="OUTROS">Outros</option>
+                    </select>
+                  </div>
+
+                  {/* Tipo */}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 ml-1">
+                      Tipo *
+                    </label>
+                    <select
+                      name="tipoVeiculo"
+                      value={formData.tipoVeiculo}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-3.5 bg-[#0F172A] text-white border border-slate-700 rounded-xl focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 focus:outline-none transition"
+                    >
+                      <option value="Passeio">Passeio</option>
+                      <option value="SUV/Pick-up">SUV/Pick-up</option>
+                      <option value="Motocicleta">Motocicleta</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Vencimento Preferencial */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 ml-1">
+                    Vencimento Preferencial *
+                  </label>
+                  <div className="grid grid-cols-4 gap-2">
+                    {['05', '10', '15', '20'].map((dia) => (
+                      <button
+                        key={dia}
+                        type="button"
+                        onClick={() => setFormData(prev => ({ ...prev, diaVencimento: dia }))}
+                        className={`py-3 rounded-xl border font-bold transition-all ${
+                          formData.diaVencimento === dia
+                            ? 'bg-cyan-600 border-cyan-500 text-white shadow-lg shadow-cyan-900/30'
+                            : 'bg-[#0F172A] border-slate-700 text-slate-400 hover:border-slate-500'
+                        }`}
+                      >
+                        Dia {dia}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Resumo antes de enviar */}
+                <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700 mt-6">
+                  <h3 className="text-xs font-bold text-slate-400 uppercase mb-3 border-b border-slate-700 pb-2">Resumo do Cadastro</h3>
+                  <div className="space-y-1 text-sm">
+                    <div className="flex justify-between"><span className="text-slate-500">Nome:</span> <span className="text-white">{formData.nome}</span></div>
+                    <div className="flex justify-between"><span className="text-slate-500">Veículo:</span> <span className="text-white">{formData.modelo} ({formData.cor})</span></div>
+                    <div className="flex justify-between"><span className="text-slate-500">Placa:</span> <span className="text-cyan-400 font-mono font-bold">{formData.placa}</span></div>
+                    <div className="flex justify-between"><span className="text-slate-500">Vencimento:</span> <span className="text-white">Dia {formData.diaVencimento}</span></div>
                   </div>
                 </div>
 

@@ -55,10 +55,15 @@ export class MensalistaService {
          const resultado = await supabaseService.criarMensalista({
             nome: dados.nome,
             cpf: dados.cpf,
+            email: dados.email || null, // Novo campo
             placa: dados.placa,
+            renavam: dados.renavam, // Novo campo
             modelo: dados.modelo,
             cor: dados.cor,
+            tipo_veiculo: dados.tipoVeiculo, // Novo campo
+            dia_vencimento: dados.diaVencimento, // Novo campo
             whatsapp: dados.whatsapp,
+            patio_id: dados.patioId || null, // Novo campo
             status: 'PENDENTE'
          });
 
