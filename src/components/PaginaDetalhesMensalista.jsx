@@ -368,85 +368,10 @@ export function PaginaDetalhesMensalista({ mensalistaId, onVoltar, onAtualizar }
             </div>
           )}
         </div>
-                    <p className="text-slate-500 text-xs uppercase tracking-wider mb-1">Veículo</p>
-                    <div className="flex items-center gap-2">
-                        <span className="text-white font-bold font-mono text-lg">{mensalista.placa}</span>
-                        <span className="text-slate-400">•</span>
-                        <span className="text-slate-300">{mensalista.modelo || 'Modelo N/A'}</span>
-                        <span className="text-slate-500 text-xs">({mensalista.cor || 'Cor N/A'})</span>
-                    </div>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-4 relative z-10">
-              <div className="space-y-2">
-                  <label className="text-xs text-slate-400 uppercase font-bold">Nome</label>
-                  <input
-                    type="text"
-                    value={formEdit.nome || ''}
-                    onChange={(e) => setFormEdit({ ...formEdit, nome: e.target.value })}
-                    className="w-full px-4 py-3 bg-[#0F172A] border border-slate-700 rounded-xl text-white focus:border-cyan-500 focus:outline-none transition-colors"
-                  />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                      <label className="text-xs text-slate-400 uppercase font-bold">CPF</label>
-                      <input
-                        type="text"
-                        value={formEdit.cpf || ''}
-                        onChange={(e) => setFormEdit({ ...formEdit, cpf: e.target.value })}
-                        className="w-full px-4 py-3 bg-[#0F172A] border border-slate-700 rounded-xl text-white focus:border-cyan-500 focus:outline-none transition-colors font-mono"
-                      />
-                  </div>
-                  <div className="space-y-2">
-                      <label className="text-xs text-slate-400 uppercase font-bold">WhatsApp</label>
-                      <input
-                        type="text"
-                        value={formEdit.whatsapp || ''}
-                        onChange={(e) => setFormEdit({ ...formEdit, whatsapp: e.target.value })}
-                        className="w-full px-4 py-3 bg-[#0F172A] border border-slate-700 rounded-xl text-white focus:border-cyan-500 focus:outline-none transition-colors font-mono"
-                      />
-                  </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                      <label className="text-xs text-slate-400 uppercase font-bold">Modelo</label>
-                      <input
-                        type="text"
-                        value={formEdit.modelo || ''}
-                        onChange={(e) => setFormEdit({ ...formEdit, modelo: e.target.value })}
-                        className="w-full px-4 py-3 bg-[#0F172A] border border-slate-700 rounded-xl text-white focus:border-cyan-500 focus:outline-none transition-colors uppercase"
-                      />
-                  </div>
-                  <div className="space-y-2">
-                      <label className="text-xs text-slate-400 uppercase font-bold">Cor</label>
-                      <input
-                        type="text"
-                        value={formEdit.cor || ''}
-                        onChange={(e) => setFormEdit({ ...formEdit, cor: e.target.value })}
-                        className="w-full px-4 py-3 bg-[#0F172A] border border-slate-700 rounded-xl text-white focus:border-cyan-500 focus:outline-none transition-colors uppercase"
-                      />
-                  </div>
-              </div>
-              
-              <div className="flex gap-3 pt-2">
-                <button
-                  onClick={handleSalvarEdicao}
-                  disabled={processando}
-                  className="flex-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold py-3 rounded-xl disabled:opacity-50 shadow-lg shadow-emerald-900/20 transition-all active:scale-95"
-                >
-                  <Check className="w-4 h-4 inline mr-2" />
-                  Salvar
-                </button>
-                <button
-                  onClick={() => setEditando(false)}
-                  className="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-xl transition-all active:scale-95"
-                >
-                  <X className="w-4 h-4 inline mr-2" />
-                  Cancelar
-                </button>
-              </div>
+      </div>
+    </div>
+  );
+};
             </div>
           )}
         </div>
