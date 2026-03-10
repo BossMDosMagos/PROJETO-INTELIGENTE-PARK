@@ -1448,6 +1448,11 @@ class SupabaseService {
         valor_hora: dados.valorHora,
         tolerancia_minutos: dados.toleranciaMinutos,
         valor_caixa_inicial: dados.valorCaixaInicial,
+        mensagem_convite: dados.mensagemConvite,
+        aceita_moto: dados.aceitaMoto,
+        cobra_multa: dados.cobraMulta,
+        valor_multa: dados.valorMulta,
+        dias_vencimento: dados.diasVencimento,
         updated_at: new Date().toISOString()
       };
       

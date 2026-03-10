@@ -9,6 +9,7 @@ import { ModalConviteWhatsApp } from '../ModalConviteWhatsApp';
 // Se for lazy, o Suspense já deve estar no LazyPage.
 
 const GestaoMensalistas = ({
+  config,
   AbaSolicitacoesMensalistasLazy, // Componente Lazy
   showModalConvite,
   setShowModalConvite,
@@ -88,6 +89,7 @@ const GestaoMensalistas = ({
 
       {/* Modal de Convite WhatsApp */}
       <ModalConviteWhatsApp
+        config={config}
         isOpen={showModalConvite}
         onClose={() => setShowModalConvite(false)}
         onEnviar={(numero, sucesso) => {

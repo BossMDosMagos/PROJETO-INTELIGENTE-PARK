@@ -2,18 +2,22 @@ import React, { useState } from 'react';
 import { MessageCircle, X, Copy, CheckCircle } from 'lucide-react';
 import { audioService } from '../services/audioService';
 
-export function ModalConviteWhatsApp({ isOpen, onClose, onEnviar }) {
+export function ModalConviteWhatsApp({ isOpen, onClose, onEnviar, config }) {
   const [numeroTelefone, setNumeroTelefone] = useState('');
   const [copiado, setCopiado] = useState(false);
   const [erro, setErro] = useState('');
 
   const urlCadastro = 'https://BossMDosMagos.github.io/PROJETO-INTELIGENTE-PARK/?cadastro=1';
 
-  const mensagem = `Olá! Para agilizar seu acesso como mensalista, preencha seus dados aqui:
+  const mensagemPadrao = `Olá! Para agilizar seu acesso como mensalista, preencha seus dados aqui:
 
 ${urlCadastro}
 
 Assim que terminar, faremos sua ativação no pátio! 🚗`;
+
+  const mensagem = config?.mensagemConvite 
+    ? `${config.mensagemConvite}\n\n${urlCadastro}`
+    : mensagemPadrao;
 
   const handleNumeroChange = (e) => {
     const valor = e.target.value.replace(/\D/g, '').slice(0, 11);

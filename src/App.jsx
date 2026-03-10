@@ -153,7 +153,14 @@ const CONFIG_PADRAO = {
   cicloTeto: 12 * 60, // 12 horas em minutos
   
   // CONTROL DE CAIXA
-  valorCaixaInicial: 300.00 // Saldo inicial do caixa (geralmente R$ 300,00)
+  valorCaixaInicial: 300.00, // Saldo inicial do caixa (geralmente R$ 300,00)
+  
+  // CONFIGURAÇÕES DE NEGÓCIO E MENSAGENS
+  mensagemConvite: 'Olá! Gostaria de convidar você para ser mensalista no Command Park. Acesse o link para se cadastrar:',
+  aceitaMoto: true,
+  cobraMulta: false,
+  valorMulta: 0.00,
+  diasVencimento: 5,
 };
 
 const SENHA_ADMIN = '1234';
@@ -287,7 +294,12 @@ function App() {
             logoUrl: dados.logo_url || prev.logoUrl,
             valorHora: Number(dados.valor_hora) || prev.valorHora,
             toleranciaMinutos: Number(dados.tolerancia_minutos) || prev.toleranciaMinutos,
-            valorCaixaInicial: Number(dados.valor_caixa_inicial) || prev.valorCaixaInicial
+            valorCaixaInicial: Number(dados.valor_caixa_inicial) || prev.valorCaixaInicial,
+            mensagemConvite: dados.mensagem_convite || prev.mensagemConvite,
+            aceitaMoto: dados.aceita_moto !== undefined ? dados.aceita_moto : prev.aceitaMoto,
+            cobraMulta: dados.cobra_multa !== undefined ? dados.cobra_multa : prev.cobraMulta,
+            valorMulta: Number(dados.valor_multa) || prev.valorMulta,
+            diasVencimento: Number(dados.dias_vencimento) || prev.diasVencimento
           }));
         }
       }
@@ -2647,6 +2659,7 @@ ${'='.repeat(50)}
 
           {secaoAdmin === 'mensalistas' && (
             <GestaoMensalistas 
+              config={config}
               AbaSolicitacoesMensalistasLazy={AbaSolicitacoesMensalistasLazy}
               showModalConvite={showModalConvite}
               setShowModalConvite={setShowModalConvite}
