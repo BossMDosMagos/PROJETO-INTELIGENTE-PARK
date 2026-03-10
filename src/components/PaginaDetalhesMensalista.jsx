@@ -133,7 +133,7 @@ export function PaginaDetalhesMensalista({ mensalistaId, onVoltar, onAtualizar }
             <X className="w-8 h-8 text-red-500" />
         </div>
         <p className="text-red-400 font-bold mb-4">Mensalista não encontrado</p>
-        <button onClick={onVoltar} className="px-6 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-xl transition-all">
+        <button onClick={(e) => { e.preventDefault(); onVoltar?.(); }} className="px-6 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-xl transition-all">
             Voltar
         </button>
       </div>
@@ -145,7 +145,7 @@ export function PaginaDetalhesMensalista({ mensalistaId, onVoltar, onAtualizar }
       {/* Header */}
       <div className="flex items-center gap-4 mb-6">
         <button 
-            onClick={onVoltar} 
+            onClick={(e) => { e.preventDefault(); onVoltar?.(); }} 
             className="p-2 hover:bg-white/10 text-slate-300 hover:text-white rounded-lg transition-colors"
         >
           <ArrowLeft className="w-6 h-6" />
