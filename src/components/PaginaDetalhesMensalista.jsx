@@ -170,17 +170,28 @@ export function PaginaDetalhesMensalista({ mensalistaId, onVoltar, onAtualizar }
           <div className="flex items-center justify-between mb-6 relative z-10">
             <h3 className="text-lg font-bold text-white flex items-center gap-2">
                 <User className="w-5 h-5 text-cyan-400" />
-                Dados Pessoais
+                Dados Cadastrais
             </h3>
-            {!editando && (
-              <button onClick={() => setEditando(true)} className="p-2 hover:bg-white/10 text-cyan-400 rounded-lg transition-colors">
-                <Edit2 className="w-5 h-5" />
-              </button>
-            )}
+            <button
+              onClick={() => setEditando(!editando)}
+              className="p-2 hover:bg-white/10 text-cyan-400 rounded-lg transition-colors"
+            >
+              {editando ? <X className="w-5 h-5" /> : <Edit2 className="w-5 h-5" />}
+            </button>
           </div>
 
           {!editando ? (
             <div className="space-y-4 text-sm relative z-10">
+              {mensalista.email && (
+                <div className="bg-[#0F172A]/50 p-3 rounded-xl border border-slate-700/50 flex items-center gap-3">
+                    <div className="p-2 bg-slate-800 rounded-lg"><User className="w-4 h-4 text-slate-400" /></div>
+                    <div>
+                        <p className="text-slate-500 text-xs uppercase tracking-wider">E-mail</p>
+                        <p className="text-slate-200">{mensalista.email}</p>
+                    </div>
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-[#0F172A]/50 p-3 rounded-xl border border-slate-700/50">
                     <p className="text-slate-500 text-xs uppercase tracking-wider mb-1">CPF</p>
@@ -192,11 +203,171 @@ export function PaginaDetalhesMensalista({ mensalistaId, onVoltar, onAtualizar }
                 </div>
               </div>
 
-              <div className="bg-[#0F172A]/50 p-4 rounded-xl border border-slate-700/50 flex items-center gap-4">
-                <div className="bg-slate-800 p-3 rounded-lg">
-                    <Car className="w-6 h-6 text-violet-400" />
+              <div className="bg-[#0F172A]/50 p-4 rounded-xl border border-slate-700/50">
+                <div className="flex items-center gap-3 mb-3 border-b border-slate-700/50 pb-2">
+                    <div className="bg-slate-800 p-2 rounded-lg">
+                        <Car className="w-5 h-5 text-violet-400" />
+                    </div>
+                    <span className="text-white font-bold">Veículo & Plano</span>
                 </div>
+                <div className="grid grid-cols-2 gap-4">
+                    <div>
+                        <p className="text-slate-500 text-xs uppercase">Placa</p>
+                        <p className="text-white font-bold font-mono text-lg">{mensalista.placa}</p>
+                    </div>
+                    <div>
+                        <p className="text-slate-500 text-xs uppercase">Renavam</p>
+                        <p className="text-white font-mono">{mensalista.renavam || '-'}</p>
+                    </div>
+                    <div>
+                        <p className="text-slate-500 text-xs uppercase">Modelo</p>
+                        <p className="text-white">{mensalista.modelo} <span className="text-slate-500 text-xs">({mensalista.cor})</span></p>
+                    </div>
+                    <div>
+                        <p className="text-slate-500 text-xs uppercase">Tipo</p>
+                        <p className="text-white">{mensalista.tipo_veiculo || 'Passeio'}</p>
+                    </div>
+                </div>
+                <div className="mt-3 pt-3 border-t border-slate-700/50 flex items-center justify-between">
+                    <span className="text-slate-400 text-xs uppercase font-bold">Vencimento Preferencial</span>
+                    <span className="text-emerald-400 font-bold bg-emerald-500/10 px-3 py-1 rounded-lg border border-emerald-500/20">
+                        Dia {mensalista.dia_vencimento || '05'}
+                    </span>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4 animate-fade-in relative z-10">
+                {/* Formulário de Edição */}
                 <div>
+                  <label className="text-xs text-slate-500 uppercase font-bold mb-1 block">Nome Completo</label>
+                  <input
+                    className="w-full bg-[#0F172A] border border-slate-700 rounded-lg p-3 text-white focus:border-cyan-500 focus:outline-none transition"
+                    value={formEdit.nome || ''}
+                    onChange={(e) => setFormEdit({ ...formEdit, nome: e.target.value })}
+                  />
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs text-slate-500 uppercase font-bold mb-1 block">CPF</label>
+                    <input
+                      className="w-full bg-[#0F172A] border border-slate-700 rounded-lg p-3 text-white font-mono focus:border-cyan-500 focus:outline-none transition"
+                      value={formEdit.cpf || ''}
+                      onChange={(e) => setFormEdit({ ...formEdit, cpf: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-slate-500 uppercase font-bold mb-1 block">WhatsApp</label>
+                    <input
+                      className="w-full bg-[#0F172A] border border-slate-700 rounded-lg p-3 text-white font-mono focus:border-cyan-500 focus:outline-none transition"
+                      value={formEdit.whatsapp || ''}
+                      onChange={(e) => setFormEdit({ ...formEdit, whatsapp: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs text-slate-500 uppercase font-bold mb-1 block">E-mail</label>
+                  <input
+                    className="w-full bg-[#0F172A] border border-slate-700 rounded-lg p-3 text-white focus:border-cyan-500 focus:outline-none transition"
+                    value={formEdit.email || ''}
+                    onChange={(e) => setFormEdit({ ...formEdit, email: e.target.value })}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs text-slate-500 uppercase font-bold mb-1 block">Placa</label>
+                    <input
+                      className="w-full bg-[#0F172A] border border-slate-700 rounded-lg p-3 text-white font-mono uppercase focus:border-cyan-500 focus:outline-none transition"
+                      value={formEdit.placa || ''}
+                      onChange={(e) => setFormEdit({ ...formEdit, placa: e.target.value.toUpperCase() })}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-slate-500 uppercase font-bold mb-1 block">Renavam</label>
+                    <input
+                      className="w-full bg-[#0F172A] border border-slate-700 rounded-lg p-3 text-white font-mono focus:border-cyan-500 focus:outline-none transition"
+                      value={formEdit.renavam || ''}
+                      onChange={(e) => setFormEdit({ ...formEdit, renavam: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs text-slate-500 uppercase font-bold mb-1 block">Modelo</label>
+                    <input
+                      className="w-full bg-[#0F172A] border border-slate-700 rounded-lg p-3 text-white uppercase focus:border-cyan-500 focus:outline-none transition"
+                      value={formEdit.modelo || ''}
+                      onChange={(e) => setFormEdit({ ...formEdit, modelo: e.target.value.toUpperCase() })}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-slate-500 uppercase font-bold mb-1 block">Cor</label>
+                    <select
+                      className="w-full bg-[#0F172A] border border-slate-700 rounded-lg p-3 text-white focus:border-cyan-500 focus:outline-none transition"
+                      value={formEdit.cor || ''}
+                      onChange={(e) => setFormEdit({ ...formEdit, cor: e.target.value })}
+                    >
+                      <option value="">Selecione</option>
+                      <option value="BRANCO">BRANCO</option>
+                      <option value="PRETO">PRETO</option>
+                      <option value="PRATA">PRATA</option>
+                      <option value="CINZA">CINZA</option>
+                      <option value="VERMELHO">VERMELHO</option>
+                      <option value="AZUL">AZUL</option>
+                      <option value="OUTROS">OUTROS</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs text-slate-500 uppercase font-bold mb-1 block">Tipo Veículo</label>
+                    <select
+                      className="w-full bg-[#0F172A] border border-slate-700 rounded-lg p-3 text-white focus:border-cyan-500 focus:outline-none transition"
+                      value={formEdit.tipo_veiculo || 'Passeio'}
+                      onChange={(e) => setFormEdit({ ...formEdit, tipo_veiculo: e.target.value })}
+                    >
+                      <option value="Passeio">Passeio</option>
+                      <option value="SUV/Pick-up">SUV/Pick-up</option>
+                      <option value="Motocicleta">Motocicleta</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs text-slate-500 uppercase font-bold mb-1 block">Dia Vencimento</label>
+                    <select
+                      className="w-full bg-[#0F172A] border border-slate-700 rounded-lg p-3 text-white focus:border-cyan-500 focus:outline-none transition"
+                      value={formEdit.dia_vencimento || '05'}
+                      onChange={(e) => setFormEdit({ ...formEdit, dia_vencimento: e.target.value })}
+                    >
+                      <option value="05">Dia 05</option>
+                      <option value="10">Dia 10</option>
+                      <option value="15">Dia 15</option>
+                      <option value="20">Dia 20</option>
+                    </select>
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleSalvarEdicao}
+                  disabled={processando}
+                  className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 mt-2 transition-all shadow-lg shadow-emerald-900/20 active:scale-95"
+                >
+                  {processando ? (
+                    <div className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full"></div>
+                  ) : (
+                    <>
+                        <Check className="w-5 h-5" /> 
+                        Salvar Alterações
+                    </>
+                  )}
+                </button>
+            </div>
+          )}
+        </div>
                     <p className="text-slate-500 text-xs uppercase tracking-wider mb-1">Veículo</p>
                     <div className="flex items-center gap-2">
                         <span className="text-white font-bold font-mono text-lg">{mensalista.placa}</span>

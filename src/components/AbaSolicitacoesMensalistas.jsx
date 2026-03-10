@@ -58,7 +58,9 @@ export function AbaSolicitacoesMensalistas() {
       const resultado = await supabaseService.atualizarMensalista(
         mensalista.id,
         'ATIVO',
-        diasVigencia
+        diasVigencia,
+        // Mantendo dia de vencimento original se existir
+        mensalista.dia_vencimento 
       );
 
       if (resultado.sucesso) {
@@ -308,20 +310,21 @@ export function AbaSolicitacoesMensalistas() {
                         <p className="font-bold">{formatarData(m.data_cadastro)}</p>
                       </div>
                     </div>
-                    {m.data_vencimento && (
-                      <div className="flex items-center gap-2">
-                        <Calendar className="w-4 h-4 text-red-500" />
-                        <div>
-                          <p className="text-gray-500">Vencimento</p>
-                          <p className="font-bold">{formatarData(m.data_vencimento)}</p>
-                        </div>
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-amber-500" />
+                      <div>
+                        <p className="text-gray-500">Vencimento Pref.</p>
+                        <p className="font-bold">Dia {m.dia_vencimento || '05'}</p>
                       </div>
-                    )}
+                    </div>
                   </div>
 
-                  {(m.modelo || m.cor) && (
-                    <div className="mt-3 text-sm text-gray-600">
-                      <p>Veículo: <span className="font-semibold">{m.modelo || '-'}</span> {m.cor && `(${m.cor})`}</p>
+                  {(m.modelo || m.cor || m.tipo_veiculo) && (
+                    <div className="mt-3 text-sm text-gray-400 bg-slate-800/50 p-2 rounded-lg border border-slate-700/50">
+                      <div className="grid grid-cols-2 gap-2">
+                        <p>Veículo: <span className="text-white font-semibold">{m.modelo || '-'}</span> {m.cor && `(${m.cor})`}</p>
+                        <p>Renavam: <span className="text-white font-mono">{m.renavam || '-'}</span></p>
+                      </div>
                     </div>
                   )}
                 </div>
