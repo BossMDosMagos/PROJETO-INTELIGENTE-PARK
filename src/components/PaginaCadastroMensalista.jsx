@@ -5,7 +5,7 @@ import { supabaseService } from '../services/supabaseService';
 import { audioService } from '../services/audioService';
 
 export function PaginaCadastroMensalista() {
-  const [passo, setPasso] = useState(1); // 1 = formulário, 2 = confirmação
+  const [passo, setPasso] = useState(1); // 1 = Dados Pessoais, 2 = Dados Veículo, 3 = Confirmação
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState('');
   const [sucesso, setSucesso] = useState(false);
@@ -93,8 +93,8 @@ export function PaginaCadastroMensalista() {
     setErro('');
   };
 
-  // Validar CPF
-  const validarFormulario = () => {
+  // Validar Passo 1 (Dados Pessoais)
+  const validarPasso1 = () => {
     if (!formData.nome.trim()) {
       setErro('Nome é obrigatório');
       return false;
@@ -115,19 +115,43 @@ export function PaginaCadastroMensalista() {
       return false;
     }
 
+    return true;
+  };
+
+  // Validar Passo 2 (Dados Veículo)
+  const validarPasso2 = () => {
     if (!formData.placa || formData.placa.length < 3) {
       setErro('Placa do veículo é obrigatória');
       return false;
     }
-
     return true;
+  };
+
+  // Avançar para próximo passo
+  const proximoPasso = () => {
+    if (passo === 1) {
+      if (validarPasso1()) {
+        setPasso(2);
+        setErro('');
+      } else {
+        audioService.erro();
+      }
+    }
+  };
+
+  // Voltar para passo anterior
+  const voltarPasso = () => {
+    if (passo === 2) {
+      setPasso(1);
+      setErro('');
+    }
   };
 
   // Enviar cadastro
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!validarFormulario()) {
+    if (!validarPasso2()) {
       audioService.erro();
       return;
     }
@@ -142,7 +166,7 @@ export function PaginaCadastroMensalista() {
         audioService.sucesso();
         setMensalistaEnviado(resultado.mensalista);
         setSucesso(true);
-        setPasso(2);
+        setPasso(3); // Tela de Sucesso
         setFormData({
           nome: '',
           cpf: '',
@@ -210,13 +234,23 @@ export function PaginaCadastroMensalista() {
 
         {/* Card Principal */}
         <div className="bg-[#1E293B]/40 backdrop-blur-xl border border-white/10 rounded-3xl shadow-[0_0_50px_rgba(0,0,0,0.3)] overflow-hidden">
-          {passo === 1 ? (
-            /* PASSO 1: FORMULÁRIO */
+          
+          {/* Barra de Progresso */}
+          {passo < 3 && (
+            <div className="flex w-full h-1.5 bg-slate-800">
+              <div 
+                className={`h-full bg-cyan-500 transition-all duration-500 ${passo === 1 ? 'w-1/2' : 'w-full'}`}
+              ></div>
+            </div>
+          )}
+
+          {passo === 1 && (
+            /* PASSO 1: DADOS PESSOAIS */
             <div className="p-8">
               <div className="text-center mb-8">
-                <h2 className="text-xl font-bold text-white mb-2">Cadastro de Mensalista</h2>
+                <h2 className="text-xl font-bold text-white mb-2">Dados Pessoais</h2>
                 <p className="text-slate-400 text-sm leading-relaxed">
-                  Preencha seus dados abaixo para registrar seu veículo no sistema <span className="text-white font-semibold">{config.nomeEmpresa}</span>.
+                  Informe seus dados para contato e identificação.
                 </p>
               </div>
 
@@ -227,7 +261,7 @@ export function PaginaCadastroMensalista() {
                 </div>
               )}
 
-              <form onSubmit={handleSubmit} className="space-y-5">
+              <div className="space-y-5">
                 {/* Nome */}
                 <div>
                   <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 ml-1">
@@ -282,6 +316,36 @@ export function PaginaCadastroMensalista() {
                   </p>
                 </div>
 
+                {/* Botão Próximo */}
+                <button
+                  onClick={proximoPasso}
+                  className="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-4 rounded-xl transition-all transform active:scale-95 flex items-center justify-center gap-2 mt-8 shadow-lg border border-white/10"
+                >
+                  <span>Continuar</span>
+                  <ArrowRight className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {passo === 2 && (
+            /* PASSO 2: DADOS DO VEÍCULO */
+            <div className="p-8">
+              <div className="text-center mb-8">
+                <h2 className="text-xl font-bold text-white mb-2">Dados do Veículo</h2>
+                <p className="text-slate-400 text-sm leading-relaxed">
+                  Qual veículo você vai estacionar?
+                </p>
+              </div>
+
+              {erro && (
+                <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex items-start gap-3 animate-shake">
+                  <AlertCircle className="w-5 h-5 text-red-400 mt-0.5 flex-shrink-0" />
+                  <p className="text-red-400 font-medium text-sm">{erro}</p>
+                </div>
+              )}
+
+              <form onSubmit={handleSubmit} className="space-y-5">
                 {/* Placa */}
                 <div>
                   <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 ml-1">
@@ -332,82 +396,66 @@ export function PaginaCadastroMensalista() {
                   </div>
                 </div>
 
-                {/* Botão Enviar */}
-                <button
-                  type="submit"
-                  disabled={carregando}
-                  className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 disabled:opacity-50 text-white font-bold py-4 rounded-xl transition-all transform active:scale-95 flex items-center justify-center gap-2 mt-8 shadow-lg shadow-violet-900/20 border border-white/10"
-                >
-                  {carregando ? (
-                    <>
-                      <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></div>
-                      <span>Processando...</span>
-                    </>
-                  ) : (
-                    <>
-                      <span>Enviar Cadastro</span>
-                      <ArrowRight className="w-5 h-5" />
-                    </>
-                  )}
-                </button>
+                <div className="flex gap-3 mt-8">
+                  <button
+                    type="button"
+                    onClick={voltarPasso}
+                    className="px-6 py-4 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl transition border border-slate-700"
+                  >
+                    Voltar
+                  </button>
+                  
+                  {/* Botão Enviar */}
+                  <button
+                    type="submit"
+                    disabled={carregando}
+                    className="flex-1 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 disabled:opacity-50 text-white font-bold py-4 rounded-xl transition-all transform active:scale-95 flex items-center justify-center gap-2 shadow-lg shadow-violet-900/20 border border-white/10"
+                  >
+                    {carregando ? (
+                      <>
+                        <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></div>
+                        <span>Processando...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>Finalizar Cadastro</span>
+                        <CheckCircle className="w-5 h-5" />
+                      </>
+                    )}
+                  </button>
+                </div>
               </form>
             </div>
-          ) : (
-            /* PASSO 2: CONFIRMAÇÃO */
+          )}
+
+          {passo === 3 && (
+            /* PASSO 3: CONFIRMAÇÃO */
             <div className="p-8 text-center">
-              <div className="flex justify-center mb-8">
-                <div className="bg-emerald-500/20 p-6 rounded-full animate-bounce border border-emerald-500/30">
-                  <CheckCircle className="w-16 h-16 text-emerald-400" />
+              <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6 border border-green-500/50 shadow-lg shadow-green-500/30 animate-scaleIn">
+                <CheckCircle className="w-10 h-10 text-green-400" />
+              </div>
+              <h2 className="text-2xl font-bold text-white mb-3">Cadastro Enviado!</h2>
+              <p className="text-slate-300 mb-8 leading-relaxed">
+                Seus dados foram recebidos com sucesso.
+                <br />
+                <span className="text-cyan-400 font-semibold block mt-2">Aguarde a ativação pelo administrador do pátio.</span>
+              </p>
+              
+              {/* Resumo do Cadastro */}
+              {mensalistaEnviado && (
+                <div className="bg-slate-800/50 rounded-xl p-4 mb-8 text-left border border-slate-700">
+                  <p className="text-sm text-slate-400 mb-1">Nome: <span className="text-white">{mensalistaEnviado.nome}</span></p>
+                  <p className="text-sm text-slate-400 mb-1">Placa: <span className="text-white font-mono">{mensalistaEnviado.placa}</span></p>
+                  <p className="text-sm text-slate-400">Protocolo: <span className="text-cyan-400 font-mono">#{mensalistaEnviado.id?.slice(0, 8)}</span></p>
                 </div>
-              </div>
-
-              <h2 className="text-3xl font-bold text-white mb-4">
-                Cadastro Recebido! 🎉
-              </h2>
-
-              <div className="bg-[#0F172A] rounded-xl p-6 mb-8 border border-slate-700">
-                <p className="text-slate-400 mb-6 text-sm">
-                  Seus dados foram registrados com sucesso no nosso sistema.
-                </p>
-
-                <div className="space-y-4 text-left">
-                  <div className="flex justify-between items-center py-2 border-b border-slate-800">
-                    <span className="font-semibold text-slate-400 text-sm">Nome:</span>
-                    <span className="text-white font-medium">{mensalistaEnviado?.nome}</span>
-                  </div>
-                  <div className="flex justify-between items-center py-2 border-b border-slate-800">
-                    <span className="font-semibold text-slate-400 text-sm">Placa:</span>
-                    <span className="text-cyan-400 font-mono text-lg font-bold">{mensalistaEnviado?.placa}</span>
-                  </div>
-                  <div className="flex justify-between items-center py-2">
-                    <span className="font-semibold text-slate-400 text-sm">Status:</span>
-                    <span className="bg-amber-500/20 text-amber-400 px-3 py-1 rounded-full text-xs font-bold border border-amber-500/30">
-                      AGUARDANDO APROVAÇÃO
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-violet-900/20 rounded-xl p-5 mb-8 border border-violet-500/30">
-                <p className="text-sm text-violet-200">
-                  <strong>Próximo passo:</strong> Nossa equipe entrará em contato via WhatsApp para ativar seu acesso. 
-                  Fique atento! 📱
-                </p>
-              </div>
+              )}
 
               <button
-                onClick={() => {
-                  setPasso(1);
-                  setSucesso(false);
-                }}
-                className="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-3.5 rounded-xl transition border border-slate-700 hover:text-white"
+                onClick={() => window.location.reload()}
+                className="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-4 rounded-xl transition-all border border-white/10"
               >
-                Fazer Novo Cadastro
+                Novo Cadastro
               </button>
-
-              <p className="text-xs text-slate-500 mt-6">
-                Dúvidas? Entre em contato com a administração.
-              </p>
             </div>
           )}
         </div>
