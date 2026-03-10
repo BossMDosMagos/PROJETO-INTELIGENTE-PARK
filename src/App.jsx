@@ -2435,7 +2435,7 @@ ${'='.repeat(50)}
                 desc="Aprovação de cadastros, gestão de contratos e controle de acesso de mensalistas."
                 color="#a78bfa"
                 onClick={() => setSecaoAdmin('mensalistas')}
-                badge={pendenciasMensalistas > 0 ? (
+                badge={(pendenciasMensalistas || 0) > 0 ? (
                   <span className="px-2 py-1 bg-red-500/20 text-red-400 border border-red-500/30 rounded text-xs font-bold animate-pulse">
                     {pendenciasMensalistas} PENDENTE(S)
                   </span>
