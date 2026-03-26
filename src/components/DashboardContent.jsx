@@ -20,6 +20,41 @@ export default function DashboardContent({
     return () => clearInterval(intervalo);
   }, []);
 
+  // Função de cálculo de valor
+  const calcularValor = (entrada) => {
+    const diferencaMs = tempoAtual - entrada;
+    const diferencaMinutos = Math.floor(diferencaMs / (1000 * 60));
+    
+    const tipo = 'carro';
+    let valorFracao, valorTeto;
+    if (tipo === 'moto') {
+      valorFracao = config.valorFracaoMoto || 4.50;
+      valorTeto = config.valorTetoMoto || 27.50;
+    } else {
+      valorFracao = config.valorFracao || 9.00;
+      valorTeto = config.valorTeto || 55.00;
+    }
+    
+    const tempoFracao = config.tempoFracao || 30;
+    const cicloTeto = config.cicloTeto || 720;
+    const tolerancia = config.toleranciaMinutos || 15;
+    
+    if (diferencaMinutos <= tolerancia) return 0;
+    
+    const ciclosCompletos = Math.floor(diferencaMinutos / cicloTeto);
+    const minutosNoCicloAtual = diferencaMinutos % cicloTeto;
+    
+    let valorCicloAtual = 0;
+    if (minutosNoCicloAtual > tolerancia) {
+      const minutosAcimaDoGratuito = minutosNoCicloAtual - tolerancia;
+      const fracoesNoCicloAtual = Math.ceil(minutosAcimaDoGratuito / tempoFracao);
+      const valorFracoesAtual = fracoesNoCicloAtual * valorFracao;
+      valorCicloAtual = Math.min(valorFracoesAtual, valorTeto);
+    }
+    
+    return (ciclosCompletos * valorTeto) + valorCicloAtual;
+  };
+
   // Detectar tipo de placa (Mercosul ou Antiga)
   const getTipoPlaca = (valor) => {
     const cleaned = valor.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
@@ -197,31 +232,43 @@ export default function DashboardContent({
         {/* Lista de Veículos Recentes */}
         <div className="flex-1 overflow-hidden">
           <h3 className="text-sm font-semibold text-gray-400 mb-2">Veículos no Pátio</h3>
-          <div className="space-y-2 max-h-[300px] overflow-y-auto">
+          <div className="space-y-2 max-h-[400px] overflow-y-auto">
             {veiculosAtivos.map((v, i) => {
-              const tempo = Math.floor((tempoAtual - (v.entrada || v.horaEntrada)) / 1000);
+              const entrada = v.entrada || v.horaEntrada;
+              const tempo = Math.floor((tempoAtual - entrada) / 1000);
               const horas = Math.floor(tempo / 3600);
               const minutos = Math.floor((tempo % 3600) / 60);
               const segundos = tempo % 60;
               const tempoFormatado = `${String(horas).padStart(2, '0')}:${String(minutos).padStart(2, '0')}:${String(segundos).padStart(2, '0')}`;
+              const valor = v.isMensalista ? 0 : calcularValor(entrada);
               
               return (
-                <div key={v.id || i} className="flex items-center justify-between p-3 bg-[#1E293B]/50 rounded-lg border border-white/5">
-                  <div>
-                    <div className="font-bold text-white text-lg">{v.placa}</div>
-                    <div className="text-xs text-gray-400">
-                      {v.modelo || 'Não informado'} {v.cor ? `- ${v.cor}` : ''}
-                      {v.isMensalista && <span className="text-emerald-400 ml-2">📋 Mensalista</span>}
+                <div key={v.id || i} className="p-4 bg-[#1E293B]/50 rounded-xl border border-white/5 hover:border-cyan-500/30 transition-all">
+                  <div className="flex items-center justify-between mb-2">
+                    <div>
+                      <div className="font-bold text-white text-xl">{v.placa}</div>
+                      <div className="text-sm text-gray-400">
+                        {v.modelo || 'Não informado'} {v.cor ? `- ${v.cor}` : ''}
+                        {v.isMensalista && <span className="text-emerald-400 ml-2">📋 Mensalista</span>}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div 
+                        className="text-2xl font-mono font-bold text-red-500"
+                        style={{ textShadow: '0 0 15px rgba(239, 68, 68, 0.6)' }}
+                      >
+                        R$ {valor.toFixed(2)}
+                      </div>
                     </div>
                   </div>
-                  <div className="text-right">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-gray-400 text-sm">
+                      <Clock className="w-4 h-4" />
+                      Tempo:
+                    </div>
                     <div 
-                      className="text-lg font-mono font-bold"
-                      style={{ 
-                        color: '#EF4444',
-                        animation: 'pulse-vermelho 1s ease-in-out infinite',
-                        textShadow: '0 0 10px rgba(239, 68, 68, 0.5)'
-                      }}
+                      className="text-xl font-mono font-bold text-emerald-400"
+                      style={{ textShadow: '0 0 10px rgba(34, 197, 94, 0.5)' }}
                     >
                       {tempoFormatado}
                     </div>
