@@ -43,36 +43,82 @@ export function Input({
   ariaLabel = '',
   ariaDescribedBy = '',
   required = false,
+  darkMode = false,
   ...otherProps
 }) {
-  const variantStyles = {
+  const variantStyles = darkMode ? {
+    primary: {
+      border: `2px solid #475569`,
+      focusBorder: `2px solid #06b6d4`,
+      bg: '#1e293b',
+      focusBg: '#334155',
+      text: '#f8fafc',
+      label: '#94a3b8',
+      placeholder: '#64748b'
+    },
+    success: {
+      border: `2px solid #065f46`,
+      focusBorder: `2px solid #10b981`,
+      bg: '#1e293b',
+      focusBg: '#334155',
+      text: '#f8fafc',
+      label: '#94a3b8',
+      placeholder: '#64748b'
+    },
+    warning: {
+      border: `2px solid #92400e`,
+      focusBorder: `2px solid #f59e0b`,
+      bg: '#1e293b',
+      focusBg: '#334155',
+      text: '#f8fafc',
+      label: '#94a3b8',
+      placeholder: '#64748b'
+    },
+    error: {
+      border: `2px solid #7f1d1d`,
+      focusBorder: `2px solid #ef4444`,
+      bg: '#1e293b',
+      focusBg: '#334155',
+      text: '#f8fafc',
+      label: '#94a3b8',
+      placeholder: '#64748b'
+    }
+  } : {
     primary: {
       border: `2px solid ${DESIGN.colors.primary[300]}`,
       focusBorder: `2px solid ${DESIGN.colors.primary[600]}`,
       bg: DESIGN.colors.neutral[50],
       focusBg: 'white',
-      text: DESIGN.colors.neutral[900]
+      text: DESIGN.colors.neutral[900],
+      label: DESIGN.colors.neutral[700],
+      placeholder: '#999'
     },
     success: {
       border: `2px solid ${DESIGN.colors.success[300]}`,
       focusBorder: `2px solid ${DESIGN.colors.success[600]}`,
       bg: DESIGN.colors.success[50],
       focusBg: 'white',
-      text: DESIGN.colors.neutral[900]
+      text: DESIGN.colors.neutral[900],
+      label: DESIGN.colors.neutral[700],
+      placeholder: '#999'
     },
     warning: {
       border: `2px solid ${DESIGN.colors.warning[300]}`,
       focusBorder: `2px solid ${DESIGN.colors.warning[600]}`,
       bg: DESIGN.colors.warning[50],
       focusBg: 'white',
-      text: DESIGN.colors.neutral[900]
+      text: DESIGN.colors.neutral[900],
+      label: DESIGN.colors.neutral[700],
+      placeholder: '#999'
     },
     error: {
       border: `2px solid ${DESIGN.colors.danger[300]}`,
       focusBorder: `2px solid ${DESIGN.colors.danger[600]}`,
       bg: DESIGN.colors.danger[50],
       focusBg: 'white',
-      text: DESIGN.colors.neutral[900]
+      text: DESIGN.colors.neutral[900],
+      label: DESIGN.colors.neutral[700],
+      placeholder: '#999'
     }
   };
 
@@ -82,6 +128,9 @@ export function Input({
   const focusBorderColor = error ? variantStyles.error.focusBorder : variantStyle.focusBorder;
   const bgColor = error ? variantStyles.error.bg : variantStyle.bg;
   const focusBgColor = error ? variantStyles.error.focusBg : variantStyle.focusBg;
+  const labelColor = darkMode ? variantStyle.label : DESIGN.colors.neutral[700];
+  const textColor = variantStyle.text;
+  const placeholderColor = variantStyle.placeholder;
 
   // Gerar IDs únicos para acessibilidade
   const errorId = `error-${Math.random().toString(36).substr(2, 9)}`;
@@ -102,7 +151,7 @@ export function Input({
             fontSize: DESIGN.typography.sizes.sm,
             fontWeight: '600',
             marginBottom: `${DESIGN.spacing.xs}px`,
-            color: DESIGN.colors.neutral[700]
+            color: labelColor
           }}
         >
           {label}
@@ -125,33 +174,26 @@ export function Input({
           padding: `${DESIGN.spacing.md}px ${DESIGN.spacing.lg}px`,
           borderRadius: DESIGN.border.radius.md,
           border: borderColor,
-          backgroundColor: bgColor,
-          color: variantStyle.text,
+          backgroundColor: darkMode ? '#1e293b' : bgColor,
+          color: darkMode ? '#f8fafc' : textColor,
           fontSize: DESIGN.typography.sizes.base,
           fontFamily: DESIGN.typography.family,
           transition: `all ${DESIGN.transition.base}`,
           outline: 'none',
           boxSizing: 'border-box',
           opacity: disabled ? 0.6 : 1,
-          cursor: disabled ? 'not-allowed' : 'text',
-          ...(!disabled && {
-            ':focus': {
-              borderColor: focusBorderColor,
-              backgroundColor: focusBgColor,
-              boxShadow: `0 0 0 3px ${DESIGN.colors.primary[100]}`
-            }
-          })
+          cursor: disabled ? 'not-allowed' : 'text'
         }}
         onFocus={(e) => {
           if (!disabled) {
-            e.target.style.borderColor = focusBorderColor;
-            e.target.style.backgroundColor = focusBgColor;
-            e.target.style.boxShadow = `0 0 0 3px ${DESIGN.colors.primary[100]}`;
+            e.target.style.borderColor = darkMode ? '#06b6d4' : focusBorderColor;
+            e.target.style.backgroundColor = darkMode ? '#334155' : focusBgColor;
+            e.target.style.boxShadow = darkMode ? '0 0 0 3px rgba(6,182,212,0.3)' : `0 0 0 3px ${DESIGN.colors.primary[100]}`;
           }
         }}
         onBlur={(e) => {
-          e.target.style.borderColor = borderColor;
-          e.target.style.backgroundColor = bgColor;
+          e.target.style.borderColor = darkMode ? '#475569' : borderColor;
+          e.target.style.backgroundColor = darkMode ? '#1e293b' : bgColor;
           e.target.style.boxShadow = 'none';
         }}
         className={className}

@@ -1,7 +1,5 @@
-import React, { useState } from 'react';
+import React from 'react';
 import DESIGN from '../design-system';
-import LanguageSwitcher from '../components/LanguageSwitcher.jsx';
-import { Settings, LogOut, Map as MapIcon, X } from 'lucide-react';
 import { MapContainer, TileLayer, CircleMarker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -32,14 +30,11 @@ export default function ProLayout({ children, onAdmin, onLogout, onToggleMap, un
     <div
       style={{
         minHeight: '100vh',
-        backgroundColor: DESIGN.colors.deepMidnight.DEFAULT, // Deep Midnight Base
+        backgroundColor: DESIGN.colors.deepMidnight.DEFAULT,
         backgroundImage: fullScreen ? 'none' : 
-          `radial-gradient(circle at 50% 0%, ${DESIGN.colors.deepMidnight.light} 0%, ${DESIGN.colors.deepMidnight.DEFAULT} 80%)`, // Gradiente sutil
+          `radial-gradient(circle at 50% 0%, ${DESIGN.colors.deepMidnight.light} 0%, ${DESIGN.colors.deepMidnight.DEFAULT} 80%)`,
         color: 'white',
-        paddingTop: fullScreen ? 0 : 16,
-        paddingLeft: fullScreen ? 0 : 16,
-        paddingRight: fullScreen ? 0 : 16,
-        overflow: fullScreen ? 'hidden' : 'auto',
+        overflow: 'hidden',
         fontFamily: DESIGN.typography.family.base
       }}
     >
@@ -108,24 +103,8 @@ export default function ProLayout({ children, onAdmin, onLogout, onToggleMap, un
         </MapContainer>
       </div>
 
-      <div
-        style={{
-          maxWidth: fullScreen ? '100%' : 1280,
-          margin: fullScreen ? 0 : '0 auto',
-          marginBottom: fullScreen ? 0 : 16,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 12,
-          position: fullScreen ? 'fixed' : 'relative',
-          top: fullScreen ? 16 : 0,
-          right: fullScreen ? 16 : 0,
-          left: fullScreen ? 'auto' : 0,
-          zIndex: 1001, // Acima do Mapa
-          pointerEvents: 'none', // Permite clicar no mapa atrás se não estiver em cima dos botões
-          width: fullScreen ? 'auto' : '100%'
-        }}
-      >
+      {/* Barra superior do ProLayout - OCULTA, já existe TopBarSimplificada */}
+      <div style={{ display: 'none' }}>
         {!fullScreen && (
         <div
           style={{
@@ -134,10 +113,10 @@ export default function ProLayout({ children, onAdmin, onLogout, onToggleMap, un
             gap: 12,
             padding: '10px 14px',
             borderRadius: 14,
-            background: DESIGN.colors.charcoal.surface, // Charcoal Glass
+            background: DESIGN.colors.charcoal.surface,
             border: `1px solid ${DESIGN.colors.charcoal.border}`,
             backdropFilter: 'blur(12px)',
-            boxShadow: '0 4px 30px rgba(0, 0, 0, 0.3)' // Sombra sofisticada
+            boxShadow: '0 4px 30px rgba(0, 0, 0, 0.3)'
           }}
         >
           {config.logoUrl ? (
@@ -154,12 +133,12 @@ export default function ProLayout({ children, onAdmin, onLogout, onToggleMap, un
                 width: 36,
                 height: 36,
                 borderRadius: 12,
-                backgroundImage: `linear-gradient(135deg, #164e63 0%, #06b6d4 100%)`, // Cyan Gradient
+                backgroundImage: `linear-gradient(135deg, #164e63 0%, #06b6d4 100%)`,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 fontWeight: 900,
-                boxShadow: `0 0 15px #0891b2` // Cyan Glow
+                boxShadow: `0 0 15px #0891b2`
               }}
             >
               {config.nomeEmpresa ? config.nomeEmpresa.charAt(0).toUpperCase() : 'C'}
@@ -173,85 +152,16 @@ export default function ProLayout({ children, onAdmin, onLogout, onToggleMap, un
         )}
         
         <div style={{ display: 'flex', gap: 10, pointerEvents: 'auto' }}>
-            {/* Botão de Mapa (Alterna Full Screen) */}
-            {onToggleMap && (
-              <button
-                onClick={onToggleMap}
-                style={{
-                  padding: 10,
-                  borderRadius: 12,
-                  background: DESIGN.colors.charcoal.surface,
-                  border: `1px solid ${DESIGN.colors.charcoal.border}`,
-                  color: DESIGN.colors.richForest.text,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  transition: 'all 0.2s'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.borderColor = DESIGN.colors.richForest.accent}
-                onMouseLeave={(e) => e.currentTarget.style.borderColor = DESIGN.colors.charcoal.border}
-                title={fullScreen ? "Sair do Mapa" : "Abrir Mapa Tático"}
-              >
-                <MapIcon size={20} />
-              </button>
-            )}
-
-            {onAdmin && (
-              <button
-                onClick={onAdmin}
-                style={{
-                  padding: 10,
-                  borderRadius: 12,
-                  background: DESIGN.colors.charcoal.surface,
-                  border: `1px solid ${DESIGN.colors.charcoal.border}`,
-                  color: 'white',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  transition: 'all 0.2s'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.borderColor = DESIGN.colors.richForest.accent}
-                onMouseLeave={(e) => e.currentTarget.style.borderColor = DESIGN.colors.charcoal.border}
-                title="Administrativo"
-              >
-                <Settings size={20} />
-              </button>
-            )}
-            
-            {onLogout && (
-              <button
-                onClick={onLogout}
-                style={{
-                  padding: 10,
-                  borderRadius: 12,
-                  background: 'rgba(239, 68, 68, 0.2)',
-                  border: '1px solid rgba(239, 68, 68, 0.3)',
-                  color: '#fca5a5',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}
-                title="Sair / Logout"
-              >
-                <LogOut size={20} />
-              </button>
-            )}
-
-            <LanguageSwitcher />
         </div>
       </div>
       
       {/* Container de conteúdo */}
       <div
         style={{
-          maxWidth: fullScreen ? '100%' : 1280,
-          margin: fullScreen ? 0 : '0 auto',
-          display: fullScreen ? 'block' : 'grid',
-          gap: fullScreen ? 0 : 16,
-          height: fullScreen ? '100vh' : 'auto'
+          maxWidth: 1280,
+          margin: '0 auto',
+          height: 'calc(100vh - 60px)',
+          overflow: 'hidden'
         }}
       >
         {children}

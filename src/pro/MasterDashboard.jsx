@@ -113,7 +113,7 @@ export default function MasterDashboard({ unidades = [], ocupacao = {}, bi = {} 
   const alertasAtivos = mappedUnidades.filter(u => u.ocupacao > 90).length;
 
   return (
-    <div className="flex h-[calc(100vh-80px)] gap-4 p-4 relative z-10 pointer-events-none">
+    <div className="flex h-full gap-4 p-4 relative z-10 pointer-events-none">
       {/* Sidebar Flutuante */}
       <div className="w-96 bg-[#0F172A]/60 backdrop-blur-md border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col pointer-events-auto">
         {/* Header da Lista */}
@@ -151,7 +151,7 @@ export default function MasterDashboard({ unidades = [], ocupacao = {}, bi = {} 
         </div>
 
         {/* Lista de Unidades */}
-        <div className="flex-1 overflow-y-auto p-2 space-y-2 custom-scrollbar">
+        <div className="flex-1 overflow-hidden p-2 space-y-2">
           {mappedUnidades
             .filter(u => u.nome.toLowerCase().includes(searchTerm.toLowerCase()))
             .map(u => (
@@ -183,7 +183,6 @@ export default function MasterDashboard({ unidades = [], ocupacao = {}, bi = {} 
                   </span>
                 </div>
                 
-                {/* Barra de Progresso */}
                 <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
                   <div 
                     className={`h-full rounded-full transition-all duration-500 ${
@@ -206,11 +205,6 @@ export default function MasterDashboard({ unidades = [], ocupacao = {}, bi = {} 
             </div>
           ))}
         </div>
-      </div>
-
-      {/* Controller Invisível para FlyTo e FitBounds */}
-      <div className="hidden">
-        {/* O mapa real está no ProLayout, este componente só renderiza a lista lateral sobreposta */}
       </div>
     </div>
   );

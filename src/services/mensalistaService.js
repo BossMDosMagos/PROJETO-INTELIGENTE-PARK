@@ -107,8 +107,8 @@ export class MensalistaService {
   /**
    * Obter mensalista por placa
    */
-  obterPorPlaca(placa) {
-    const mensalistas = this.getAll();
+  async obterPorPlaca(placa) {
+    const mensalistas = await this.getAll();
     return mensalistas.find(m => m.placa.toUpperCase() === placa.toUpperCase());
   }
 

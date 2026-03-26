@@ -124,11 +124,88 @@ class SupabaseService {
       
       this.initialized = true;
       console.log('✅ Supabase inicializado');
+      
+      // Criar usuário master automaticamente se não existir
+      await this.criarUsuarioMasterSeNaoExistir();
+      
       return true;
     } catch (error) {
       console.error('❌ Erro ao inicializar Supabase:', error);
       this.initialized = false;
       return false;
+    }
+  }
+
+  /**
+   * Cria usuário master automaticamente se não existir
+   */
+  async criarUsuarioMasterSeNaoExistir() {
+    try {
+      const emailMaster = 'master@inteligente-park.com';
+      const senhaMaster = 'Senha@123';
+      
+      // Verifica se já existe
+      const { data: usuarios, error: buscaError } = await this.client
+        .from('perfis')
+        .select('id')
+        .eq('email', emailMaster)
+        .limit(1);
+      
+      if (buscaError) {
+        console.warn('⚠️ Erro ao buscar usuário master:', buscaError.message);
+        return;
+      }
+      
+      if (usuarios && usuarios.length > 0) {
+        console.log('✅ Usuário master já existe');
+        return;
+      }
+      
+      console.log('🔧 Criando usuário master...');
+      
+      // Criar no Auth
+      const { data: authData, error: authError } = await this.client.auth.signUp({
+        email: emailMaster,
+        password: senhaMaster,
+        options: {
+          data: {
+            operador: 'master',
+            nivel_acesso: 'MASTER'
+          }
+        }
+      });
+      
+      if (authError) {
+        // Se for erro de email já existente, ignorar
+        if (authError.message.includes('already') || authError.message.includes('exist')) {
+          console.log('✅ Usuário master já existe no Auth');
+          return;
+        }
+        console.warn('⚠️ Erro ao criar usuário master no Auth:', authError.message);
+      }
+      
+      // Criar perfil
+      const userId = authData?.user?.id;
+      if (userId) {
+        const { error: perfilError } = await this.client
+          .from('perfis')
+          .insert({
+            usuario_id: userId,
+            nome_completo: 'Administrador Master',
+            nivel_acesso: 'MASTER',
+            email: emailMaster,
+            ativo: true,
+            status: 'ativo'
+          });
+        
+        if (perfilError && !perfilError.message.includes('already') && !perfilError.message.includes('duplicate')) {
+          console.warn('⚠️ Erro ao criar perfil master:', perfilError.message);
+        } else {
+          console.log('✅ Usuário master criado com sucesso!');
+        }
+      }
+    } catch (error) {
+      console.warn('⚠️ Erro ao criar usuário master:', error.message);
     }
   }
 
@@ -1443,6 +1520,13 @@ class SupabaseService {
         cobra_multa: dados.cobraMulta,
         valor_multa: dados.valorMulta,
         dias_vencimento: dados.diasVencimento,
+        tolerancia_inicial: dados.tolerancia_inicial,
+        cobrar_adicional_teto: dados.cobrar_adicional_teto,
+        valor_teto_horas: dados.valor_teto_horas,
+        fracao_hora_minutos: dados.fracao_hora_minutos,
+        valor_primeira_hora: dados.valor_primeira_hora,
+        cobranca_moto: dados.cobranca_moto,
+        percentual_moto: dados.percentual_moto,
         updated_at: new Date().toISOString()
       };
       

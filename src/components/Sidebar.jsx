@@ -4,14 +4,13 @@ import {
   Home, 
   Car, 
   PlusCircle, 
-  MinusCircle, 
   ArrowUpCircle,
   ArrowDownCircle,
   FileEdit,
   UserCheck, 
   FileText, 
-  Banknote, 
-  DoorOpen 
+  Banknote,
+  DoorOpen
 } from 'lucide-react';
 
 export default function Sidebar({
@@ -20,128 +19,115 @@ export default function Sidebar({
   isDesktop = true,
   config = {}
 }) {
-  const itemClass = (active) =>
-    `flex items-center p-4 rounded-xl font-semibold transition-all duration-300 mb-2 ${
-      active 
-        ? 'text-[#10B981] bg-[#064E3B]/30 border-l-4 border-[#10B981] shadow-[0_0_15px_rgba(16,185,129,0.2)]' 
-        : 'text-gray-400 hover:text-white hover:bg-[#1E293B]'
-    }`;
-
-  const IconWithBadge = ({ Icon = Car, badge = null, color = '#334155', variant = 'neutral' }) => {
-    return (
-      <span
-        className="relative mr-3 inline-flex items-center justify-center"
-        style={{
-          width: 40,
-          height: 40,
-          borderRadius: '12px',
-          background: 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)',
-          boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-          border: '1px solid rgba(255,255,255,0.1)'
-        }}
-      >
-        <Icon className="w-5 h-5 text-gray-200" />
-        {badge && (
-          <span
-            className="absolute -bottom-1 -right-1 rounded-full border border-[#050A14] flex items-center justify-center shadow-lg"
-            style={{ width: 16, height: 16, backgroundColor: badge.bg }}
-            title={badge.title}
-          >
-            {badge.icon}
-          </span>
-        )}
-      </span>
-    );
-  };
+  const menuItems = [
+    { id: 'principal', icon: Home, label: 'Principal', badge: null },
+    { id: 'entrada', icon: Car, label: '1 - Entrada', badge: { bg: '#10B981', icon: ArrowUpCircle } },
+    { id: 'saida', icon: Car, label: '2 - Saída', badge: { bg: '#EF4444', icon: ArrowDownCircle } },
+    { id: 'controle', icon: FileEdit, label: '3 - Controle', badge: null },
+    { id: 'operador', icon: UserCheck, label: '4 - Operador', badge: { bg: '#10B981', icon: PlusCircle } },
+    { id: 'relatorios', icon: FileText, label: '5 - Relatórios', badge: null },
+    { id: 'caixa', icon: Banknote, label: '6 - Caixa', badge: { bg: '#10B981', icon: PlusCircle } },
+  ];
 
   return (
     <aside
-      className={`w-64 bg-[#0B1120] shadow-2xl ${isDesktop ? 'hidden md:flex' : 'flex'} flex-col border-r border-white/5 backdrop-blur-xl h-full`}
+      className="w-64 bg-[#0B1120] flex flex-col border-r border-white/5"
+      style={{ height: 'calc(100vh - 60px)' }}
     >
-      <div className="p-6 border-b border-white/5">
-        <h1 className="text-xl font-black text-white flex items-center gap-2 tracking-tight">
-          {config.logoUrl ? (
-             <div className="w-8 h-8 relative group">
-                <img 
-                 src={config.logoUrl} 
-                 alt="Logo" 
-                 className="w-full h-full object-contain"
-                />
-             </div>
-          ) : (
-            <div className="w-8 h-8 bg-gradient-to-br from-cyan-900 to-cyan-500 rounded-lg flex items-center justify-center shadow-lg">
-              <span className="text-sm font-bold">{config.nomeEmpresa ? config.nomeEmpresa.charAt(0).toUpperCase() : 'C'}</span>
-            </div>
-          )}
-          <span className="uppercase truncate max-w-[140px]">{config.nomeEmpresa || 'COMMAND PARK'}</span>
-        </h1>
-        <p className="text-[10px] text-cyan-400 mt-2 uppercase tracking-[0.2em] font-bold ml-1">Painel Tático v3.0</p>
+      {/* Header */}
+      <div 
+        className="border-b border-white/5"
+        style={{ paddingTop: '20px', paddingBottom: '20px', display: 'flex', justifyContent: 'center' }}
+      >
+        <p className="text-sm font-bold text-cyan-400 uppercase tracking-widest">Menu Principal</p>
       </div>
 
-      <nav className="flex-1 mt-4 overflow-y-auto px-2">
-        <button className={itemClass(selected === 'principal')} onClick={() => onNavigate('principal')}>
-          <Home className="w-5 h-5 mr-3" /> Principal
-        </button>
-        <button className={itemClass(selected === 'entrada')} onClick={() => onNavigate('entrada')}>
-          <IconWithBadge 
-            Icon={Car} 
-            badge={{ 
-              bg: DESIGN.colors.success[500], 
-              title: 'Entrada', 
-              icon: <ArrowUpCircle className="w-3 h-3" color="white" /> 
-            }} 
-          />
-          1 - Entrada
-        </button>
-        <button className={itemClass(selected === 'saida')} onClick={() => onNavigate('saida')}>
-          <IconWithBadge 
-            Icon={Car} 
-            badge={{ 
-              bg: DESIGN.colors.danger[500], 
-              title: 'Saída', 
-              icon: <ArrowDownCircle className="w-3 h-3" color="white" /> 
-            }} 
-          />
-          2 - Saída
-        </button>
-        <button className={itemClass(selected === 'controle')} onClick={() => onNavigate('controle')}>
-          <IconWithBadge Icon={FileEdit} />
-          3 - Controle
-        </button>
-        <button className={itemClass(selected === 'operador')} onClick={() => onNavigate('operador')}>
-          <IconWithBadge 
-            Icon={UserCheck} 
-            badge={{ bg: DESIGN.colors.success[500], title: 'Ativo', icon: <PlusCircle className="w-3 h-3" color="white" /> }}
-          />
-          4 - Operador
-        </button>
-        <button className={itemClass(selected === 'relatorios')} onClick={() => onNavigate('relatorios')}>
-          <IconWithBadge Icon={FileText} />
-          5 - Relatórios
-        </button>
-        <button className={itemClass(selected === 'caixa')} onClick={() => onNavigate('caixa')}>
-          <IconWithBadge 
-            Icon={Banknote} 
-            badge={{ bg: DESIGN.colors.success[500], title: 'Adicionar', icon: <PlusCircle className="w-3 h-3" color="white" /> }}
-          />
-          6 - Caixa
-        </button>
-        <div className="mt-8 pt-4 border-t border-white/5">
+      {/* Menu Items */}
+      <div className="flex-1 flex flex-col justify-between">
+        {/* Botões do Menu */}
+        <div className="p-3 space-y-2">
+          {menuItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = selected === item.id;
+            const BadgeIcon = item.badge?.icon;
+            
+            return (
+              <button
+                key={item.id}
+                onClick={() => onNavigate(item.id)}
+                className={`
+                  w-full flex items-center px-4 py-3 rounded-xl font-semibold text-sm
+                  transition-all duration-150 active:translate-y-1
+                  ${isActive 
+                    ? 'bg-gradient-to-r from-[#064E3B] to-[#10B981] text-white shadow-lg shadow-[#10B981]/30 border border-[#10B981]/50' 
+                    : 'bg-[#1E293B]/50 text-gray-300 hover:bg-[#1E293B] hover:text-white shadow-md shadow-black/20 border border-white/5'
+                  }
+                `}
+                style={{
+                  boxShadow: isActive 
+                    ? '0 4px 15px rgba(16, 185, 129, 0.3), inset 0 1px 0 rgba(255,255,255,0.1)' 
+                    : '0 4px 6px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255,255,255,0.05)'
+                }}
+              >
+                <span
+                  className={`
+                    relative w-10 h-10 rounded-lg flex items-center justify-center mr-3
+                    ${isActive 
+                      ? 'bg-white/20 shadow-inner' 
+                      : 'bg-[#0B1120]/50 shadow-inner'
+                    }
+                  `}
+                  style={{
+                    boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.3)'
+                  }}
+                >
+                  <Icon className="w-5 h-5" />
+                  {item.badge && (
+                    <span
+                      className="absolute -top-1 -right-1 w-5 h-5 rounded-full border-2 border-[#0B1120] flex items-center justify-center"
+                      style={{ backgroundColor: item.badge.bg }}
+                    >
+                      <BadgeIcon className="w-3 h-3 text-white" />
+                    </span>
+                  )}
+                </span>
+                <span className="flex-1 text-left">{item.label}</span>
+                {isActive && (
+                  <span className="w-2 h-2 rounded-full bg-white shadow-lg shadow-white/50 animate-pulse"></span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Botão Sair - Destacado */}
+        <div className="p-3 border-t border-white/10">
           <button
-            className="flex items-center w-full p-4 rounded-xl font-bold text-red-400 hover:bg-red-900/20 hover:text-red-300 transition-all uppercase tracking-wider text-sm"
             onClick={() => onNavigate('logout')}
+            className="w-full flex items-center px-4 py-3 rounded-xl font-bold text-sm
+              bg-red-900/40 text-red-400 hover:bg-red-900/60 hover:text-red-300
+              border border-red-900/50 transition-all duration-150 active:translate-y-1"
+            style={{
+              boxShadow: '0 4px 10px rgba(127, 29, 29, 0.3), inset 0 1px 0 rgba(255,255,255,0.05)'
+            }}
           >
-            <DoorOpen className="w-5 h-5 mr-3" /> Encerrar Turno
+            <span
+              className="w-10 h-10 rounded-lg flex items-center justify-center mr-3 bg-red-900/60 shadow-inner"
+              style={{ boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.3)' }}
+            >
+              <DoorOpen className="w-5 h-5" />
+            </span>
+            <span>Sair</span>
           </button>
         </div>
-      </nav>
+      </div>
 
-      <div className="p-4 bg-[#050A14]/50 border-t border-white/5 backdrop-blur-md">
-        <div className="flex items-center gap-3 mb-2">
+      {/* Status */}
+      <div className="p-3 bg-[#050A14]/50 border-t border-white/5">
+        <div className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full bg-[#10B981] animate-pulse shadow-[0_0_10px_#10B981]"></div>
-          <span className="text-xs font-medium text-gray-400">Sistema Online</span>
+          <span className="text-xs font-medium text-gray-400">Online</span>
         </div>
-        <p className="text-[10px] text-gray-500 font-mono">ID: 10007842 | Build: 2.0.4</p>
       </div>
     </aside>
   );

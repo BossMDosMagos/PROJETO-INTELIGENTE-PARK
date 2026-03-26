@@ -16,7 +16,7 @@ import {
   prefetchPages
 } from './pages/index.jsx';
 import DESIGN from './design-system';
-import TopBarLegacy from './components/TopBarLegacy.jsx';
+import TopBarSimplificada from './components/TopBarSimplificada.jsx';
 import Sidebar from './components/Sidebar';
 import { Button } from './components/Button';
 import { StatusSincronizacao } from './components/StatusSincronizacao';
@@ -31,6 +31,7 @@ import { syncService } from './services/syncService';
 import { supabaseService } from './services/supabaseService';
 import ProLayout from './pro/ProLayout.jsx';
 import MasterDashboard from './pro/MasterDashboard.jsx';
+import DashboardContent from './components/DashboardContent.jsx';
 import OperatorDashboard from './pro/OperatorDashboard.jsx';
 import CaixaPro from './pro/CaixaPro.jsx';
 import GestaoOperadores from './components/admin/GestaoOperadores';
@@ -151,6 +152,15 @@ const CONFIG_PADRAO = {
   valorTeto: 55.00, // R$ - Carro
   valorTetoMoto: 27.50, // R$ - Moto (50% do carro)
   cicloTeto: 12 * 60, // 12 horas em minutos
+  
+  // REGRAS DE NEGÓCIO
+  tolerancia_inicial: 30, // minutos de tolerância inicial
+  cobrar_adicional_teto: false, // cobrar frações extras após atingir teto
+  valor_teto_horas: 12, // horas para ciclo do teto
+  fracao_hora_minutos: 30, // minutos por fração
+  valor_primeira_hora: 15.00, // R$ - valor primeira hora
+  cobranca_moto: true, // se cobra moto
+  percentual_moto: 50, // percentual do valor para moto
   
   // CONTROL DE CAIXA
   valorCaixaInicial: 300.00, // Saldo inicial do caixa (geralmente R$ 300,00)
@@ -299,7 +309,14 @@ function App() {
             aceitaMoto: dados.aceita_moto !== undefined ? dados.aceita_moto : prev.aceitaMoto,
             cobraMulta: dados.cobra_multa !== undefined ? dados.cobra_multa : prev.cobraMulta,
             valorMulta: Number(dados.valor_multa) || prev.valorMulta,
-            diasVencimento: Number(dados.dias_vencimento) || prev.diasVencimento
+            diasVencimento: Number(dados.dias_vencimento) || prev.diasVencimento,
+            tolerancia_inicial: Number(dados.tolerancia_inicial) || 30,
+            cobrar_adicional_teto: dados.cobrar_adicional_teto || false,
+            valor_teto_horas: Number(dados.valor_teto_horas) || 12,
+            fracao_hora_minutos: Number(dados.fracao_hora_minutos) || 30,
+            valor_primeira_hora: Number(dados.valor_primeira_hora) || 15,
+            cobranca_moto: dados.cobranca_moto !== undefined ? dados.cobranca_moto : true,
+            percentual_moto: Number(dados.percentual_moto) || 50
           }));
         }
       }
@@ -896,9 +913,9 @@ function App() {
   };
 
   // Verificar se é um mensalista ativo
-  const verificarMensalista = (placaVeiculo) => {
+  const verificarMensalista = async (placaVeiculo) => {
     const placaSemTraco = placaVeiculo.replace('-', '').toUpperCase();
-    const mensalista = mensalistaService.obterPorPlaca(placaSemTraco);
+    const mensalista = await mensalistaService.obterPorPlaca(placaSemTraco);
     
     if (mensalista && mensalistaService.ehValido(mensalista)) {
       return mensalista;
@@ -907,8 +924,21 @@ function App() {
   };
 
   // Registra entrada de veículo
-  const registrarEntrada = () => {
-    const placaFormatada = placa.trim().toUpperCase();
+  const registrarEntrada = async (dadosDashboard = null) => {
+    console.log('🔴 Clicou em registrar entrada');
+    
+    // Se receber dados do DashboardContent, usa eles
+    const placaInput = dadosDashboard?.placa || placa;
+    const modeloInput = dadosDashboard?.modelo || modelo;
+    const corInput = dadosDashboard?.cor || cor;
+    const tipoVeiculoInput = dadosDashboard?.tipoVeiculo || tipoVeiculo;
+    
+    console.log('   placa:', placaInput);
+    console.log('   modelo:', modeloInput);
+    console.log('   cor:', corInput);
+    console.log('   tipoVeiculo:', tipoVeiculoInput);
+    
+    const placaFormatada = placaInput.trim().toUpperCase();
     
     if (!placaFormatada) {
       showToast('Digite uma placa válida!', 'error');
@@ -932,11 +962,11 @@ function App() {
     }
 
     // VERIFICA SE É MENSALISTA ATIVO
-    const mensalistaEncontrado = verificarMensalista(placaFormatada);
+    const mensalistaEncontrado = await verificarMensalista(placaFormatada);
 
     // Validação de modelo e cor
-    const modeloTrimmed = modelo.trim();
-    const corTrimmed = cor.trim();
+    const modeloTrimmed = modeloInput.trim();
+    const corTrimmed = corInput.trim();
 
     if (!modeloTrimmed || !corTrimmed) {
       showToast('Preencha Modelo e Cor!', 'error');
@@ -951,8 +981,9 @@ function App() {
       placa: placaFormatada,
       modelo: modeloTrimmed,
       cor: corTrimmed,
-      tipo: tipoVeiculo,
+      tipo: tipoVeiculoInput,
       entrada: Date.now(),
+      status: 'ativo',
       isMensalista: !!mensalistaEncontrado,
       nomeMensalista: mensalistaEncontrado?.nome || null
     };
@@ -1017,6 +1048,8 @@ function App() {
     }
 
     setVeiculos((prev) => [...prev, novoVeiculo]);
+    console.log('✅ Veículo adicionado:', novoVeiculo.placa);
+    console.log('📋 Total de veículos:', veiculos.length + 1);
     setPlaca('');
     setModelo('');
     setCor('');
@@ -1041,6 +1074,9 @@ function App() {
       } else {
         showToast(`✅ ACESSO LIBERADO - Mensalista: ${mensalistaEncontrado.nome}`, 'success', 5000);
       }
+    } else {
+      // ROTATIVO - Mostra mensagem de sucesso
+      showToast(`✅ ENTRADA REGISTRADA - Rotativo: ${novoVeiculo.placa}`, 'success', 3000);
     }
 
     // Sincronizar com Supabase (offline-first)
@@ -1698,7 +1734,7 @@ ${'='.repeat(50)}
     }
 
     // 2. Fallback para senha local (Legado)
-    if (senhaInput === SENHA_ADMIN) {
+    if (senhaInput === 'Senha@123') {
       // Cria um usuário fake para admin local
       const adminUser = { id: 'admin-local', email: 'admin@local', nivelAcesso: 'MASTER' };
       setUsuarioAutenticado(adminUser);
@@ -2802,31 +2838,44 @@ ${'='.repeat(50)}
   const isMaster = String(usuarioAutenticado?.nivelAcesso || '').toUpperCase() === 'MASTER';
 
   return (
-    <div className="min-h-screen bg-[#050A14] text-gray-100 pb-20 transition-colors duration-300">
-      {!isMaster && (
-        <div style={{ position: 'fixed', left: 0, top: 0, bottom: 0, width: '16rem', zIndex: 5 }}>
-          <Sidebar selected="principal" onNavigate={(item) => {
-            if (item === 'operador') { setTela('admin'); setSecaoAdmin('operadores'); }
-            if (item === 'caixa') { setShowModalControleCaixa(true); }
-            if (item === 'entrada') { setAbaHome('patio'); }
-            if (item === 'saida') { setAbaHome('saidas'); }
-            if (item === 'logout') { 
-              supabaseService.logout(); 
-              setUsuarioAutenticado(null);
-              setSenhaInput('');
-              if (!lembrarLogin) {
-                setEmailInput('');
+    <div className="bg-[#050A14] text-gray-100" style={{ display: 'flex', height: '100vh', width: '100vw', overflow: 'hidden' }}>
+      {/* NAVBAR SUPERIOR - SEMPRE NO TOPO */}
+      <TopBarSimplificada
+        config={config}
+        onMap={() => setTela('admin')}
+        onSettings={() => { setTela('admin'); setSecaoAdmin('config'); }}
+        onLanguage={() => showToast('Funcionalidade de idioma em desenvolvimento', 'info')}
+      />
+
+      {/* Container principal com sidebar e conteúdo */}
+      <div style={{ display: 'flex', width: '100%', height: 'calc(100vh - 60px)', marginTop: '60px' }}>
+        
+        {/* SIDEBAR */}
+        {!isMaster && (
+          <div style={{ width: '256px', flexShrink: 0, height: '100%' }}>
+            <Sidebar selected="principal" onNavigate={(item) => {
+              if (item === 'operador') { setTela('admin'); setSecaoAdmin('operadores'); }
+              if (item === 'caixa') { setShowModalControleCaixa(true); }
+              if (item === 'entrada') { setAbaHome('patio'); }
+              if (item === 'saida') { setAbaHome('saidas'); }
+              if (item === 'logout') { 
+                supabaseService.logout(); 
+                setUsuarioAutenticado(null);
+                setSenhaInput('');
+                if (!lembrarLogin) {
+                  setEmailInput('');
+                }
               }
-              setSenhaInput('');
-            }
-          }} isDesktop config={config} />
-        </div>
-      )}
-      <div className={`transition-all duration-300 ${isMaster ? 'ml-0' : 'ml-0 md:ml-64'} max-w-6xl mx-auto px-4`} style={isMaster ? { maxWidth: '100%', margin: 0, padding: 0 } : {}}>
-        <ProLayout
-          unidades={unidadesMapa.length > 0 ? unidadesMapa : [{
-            id: 'default',
-            nome: config.nomeEmpresa || 'Pátio Principal',
+            }} isDesktop config={config} />
+          </div>
+        )}
+
+        {/* ÁREA DE CONTEÚDO */}
+        <div style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+          <ProLayout
+            unidades={unidadesMapa.length > 0 ? unidadesMapa : [{
+              id: 'default',
+              nome: config.nomeEmpresa || 'Pátio Principal',
             lat: -23.550520,
             lng: -46.633308,
             ocupacao: Math.min(100, Math.round((veiculos.length / 100) * 100)),
@@ -2843,9 +2892,9 @@ ${'='.repeat(50)}
             setSenhaInput('');
           }}
           onToggleMap={() => setMostrarMapaFullScreen(!mostrarMapaFullScreen)}
-          fullScreen={String(usuarioAutenticado?.nivelAcesso || '').toUpperCase() === 'MASTER' || mostrarMapaFullScreen}
+          fullScreen={isMaster && !mostrarMapaFullScreen}
         >
-          {(String(usuarioAutenticado?.nivelAcesso || '').toUpperCase() === 'MASTER' || mostrarMapaFullScreen) ? (
+          {isMaster ? (
             <MasterDashboard
               unidades={unidadesMapa.length > 0 ? unidadesMapa : [{
                 id: 'default',
@@ -2863,36 +2912,20 @@ ${'='.repeat(50)}
               }}
             />
           ) : (
-            <OperatorDashboard>
-              <div className="mb-8">
-                <CaixaPro 
-                  isOpen={caixaAberto}
-                  balance={totalCaixaAtual}
-                  onOpen={(valor) => {
-                    setConfig({ ...config, valorCaixaInicial: valor });
-                    setCaixaAberto(true);
-                    setDataAberturaCaixa(new Date().toISOString());
-                    setDataFechamentoCaixa(null);
-                    showToast(`✅ Caixa aberto: R$ ${valor.toFixed(2)}`, 'success');
-                  }}
-                  onClose={fecharCaixa}
-                  onBleed={(valor, motivo) => {
-                    showToast(`Sangria de R$ ${valor} registrada: ${motivo}`, 'info');
-                  }}
-                  history={historico.slice(0, 10).map(h => ({
-                    description: `${h.placa} - ${h.modelo}`,
-                    amount: h.valor,
-                    date: h.saida,
-                    type: 'in'
-                  }))}
-                />
-              </div>
-            </OperatorDashboard>
+            <DashboardContent
+              veiculos={veiculos}
+              historico={historico}
+              config={config}
+              onRegistrarEntrada={registrarEntrada}
+              onRegistrarSaida={registrarSaidaPorPlaca}
+            />
           )}
         </ProLayout>
+        </div>
+
         {/* ALERTA DE MENSALISTA ATIVO */}
         {showAlertaMensalista && (
-          <div className="mb-6 bg-gradient-to-r from-[#064E3B] to-[#10B981] border-2 border-[#10B981] rounded-xl p-6 shadow-[0_0_30px_rgba(16,185,129,0.4)] animate-pulse">
+          <div className="bg-gradient-to-r from-[#064E3B] to-[#10B981] border-2 border-[#10B981] rounded-xl p-6 shadow-[0_0_30px_rgba(16,185,129,0.4)] animate-pulse">
             <div className="text-center text-white">
               <div className="text-5xl mb-2">🎉</div>
               <h2 className="text-3xl font-black mb-2 tracking-tighter">ACESSO LIBERADO!</h2>
@@ -2911,610 +2944,8 @@ ${'='.repeat(50)}
           </div>
         )}
 
-        <TopBarLegacy
-          tempoAtual={tempoAtual}
-          usuario={usuarioAutenticado}
-          onNavigate={(item) => {
-            if (item === 'patio') setAbaHome('patio');
-            if (item === 'saidas') setAbaHome('saidas');
-            if (item === 'caixa') setShowModalControleCaixa(true);
-          }}
-          onLogout={() => {
-            supabaseService.logout();
-            setUsuarioAutenticado(null);
-            if (!lembrarLogin) {
-              setEmailInput('');
-            }
-            setSenhaInput('');
-          }}
-        />
-
-        {/* Controles Adicionais - Caixa + Impressoras */}
-        <div className="flex gap-2 mb-6 flex-wrap justify-end">
-          {/* Botão Controle de Caixa */}
-          <button
-            onClick={() => setShowModalControleCaixa(true)}
-            className={`text-white p-3 rounded-lg shadow-md transition-all active:scale-95 ${
-              caixaAberto
-                ? 'bg-emerald-600 hover:bg-emerald-700'
-                : 'bg-amber-500 hover:bg-amber-600'
-            }`}
-            title={caixaAberto ? 'Caixa aberto - Clique para fechar' : 'Clique para abrir o caixa'}
-          >
-            <DollarSign className="w-6 h-6" />
-          </button>
-
-          {/* Status Impressora + Conexão */}
-          <StatusConexao />
-
-          {statusImpressora && (
-            <div className="bg-white border-2 border-blue-300 text-blue-900 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium animate-pulse max-w-[130px] sm:max-w-[220px] truncate">
-              {statusImpressora}
-            </div>
-          )}
-          {statusImpressoraUSB && (
-            <div className="bg-white border-2 border-purple-300 text-purple-900 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium animate-pulse max-w-[130px] sm:max-w-[220px] truncate">
-              {statusImpressoraUSB}
-            </div>
-          )}
-
-          {/* Menu Impressoras (Bluetooth + USB) */}
-          <div className="relative group">
-            <button 
-              className={`p-3 rounded-lg shadow-md transition-all active:scale-95 flex items-center gap-2 text-white ${
-                (impressoraConectada || impressoraUSBConectada)
-                  ? 'bg-green-600 hover:bg-green-700' 
-                  : 'bg-blue-600 hover:bg-blue-700'
-              }`}
-              title="Gerenciar Impressoras"
-            >
-              <Printer className="w-5 h-5" />
-              <span className="text-lg">▼</span>
-            </button>
-
-            {/* Dropdown Menu */}
-            <div className="absolute right-0 mt-0 w-80 bg-white rounded-lg shadow-xl border-2 border-gray-200 z-40 hidden group-hover:block">
-              <div className="p-4 space-y-4">
-                {/* Bluetooth */}
-                <div className="border-b pb-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <Bluetooth className="w-5 h-5 text-blue-600" />
-                      <span className="font-bold text-gray-800">Bluetooth</span>
-                    </div>
-                    {impressoraConectada && (
-                      <span className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></span>
-                    )}
-                  </div>
-                  <p className="text-sm text-gray-600 mb-2">
-                    {impressoraConectada ? nomeImpressora : 'Desconectado'}
-                  </p>
-                  <button
-                    onClick={impressoraConectada ? desconectarImpressora : conectarImpressora}
-                    className={`w-full py-2 px-3 rounded-lg font-semibold transition-all text-sm ${
-                      impressoraConectada
-                        ? 'bg-red-500 hover:bg-red-600 text-white'
-                        : 'bg-blue-500 hover:bg-blue-600 text-white'
-                    }`}
-                  >
-                    {impressoraConectada ? 'Desconectar' : 'Conectar'}
-                  </button>
-                </div>
-
-                {/* USB */}
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <AlertTriangle className="w-5 h-5 text-purple-600" />
-                      <span className="font-bold text-gray-800">USB / Serial</span>
-                    </div>
-                    {impressoraUSBConectada && (
-                      <span className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></span>
-                    )}
-                  </div>
-                  <p className="text-sm text-gray-600 mb-2">
-                    {impressoraUSBConectada ? nomeImpressoraUSB : 'Desconectado'}
-                  </p>
-                  <button
-                    onClick={impressoraUSBConectada ? desconectarImpressoraUSB : conectarImpressoraUSB}
-                    className={`w-full py-2 px-3 rounded-lg font-semibold transition-all text-sm ${
-                      impressoraUSBConectada
-                        ? 'bg-red-500 hover:bg-red-600 text-white'
-                        : 'bg-purple-500 hover:bg-purple-600 text-white'
-                    }`}
-                  >
-                    {impressoraUSBConectada ? 'Desconectar' : (tentarSerialNoProximoClique ? 'Tentar Serial' : 'Conectar')}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Ações rápidas estilo index2 */}
-        <section className="p-2 grid grid-cols-2 md:grid-cols-4 gap-3">
-          <button
-            className="flex flex-col items-center justify-center p-4 bg-[#1E293B]/70 rounded-xl border border-white/10 shadow-sm hover:shadow-lg hover:border-blue-400/50 transition group backdrop-blur-sm"
-            onClick={() => setAbaHome('patio')}
-            title="Pátio"
-          >
-            <Car className="text-blue-400 mb-2 group-hover:scale-110 transition" />
-            <span className="text-xs font-bold uppercase text-gray-300 group-hover:text-white">Pátio ({veiculos.length})</span>
-          </button>
-          <button
-            className="flex flex-col items-center justify-center p-4 bg-[#1E293B]/70 rounded-xl border border-white/10 shadow-sm hover:shadow-lg hover:border-emerald-400/50 transition group backdrop-blur-sm"
-            onClick={() => setAbaHome('saidas')}
-            title="Saídas"
-          >
-            <CheckCircle className="text-emerald-400 mb-2 group-hover:scale-110 transition" />
-            <span className="text-xs font-bold uppercase text-gray-300 group-hover:text-white">Saídas ({historico.length})</span>
-          </button>
-          <button
-            className="flex flex-col items-center justify-center p-4 bg-[#1E293B]/70 rounded-xl border border-white/10 shadow-sm hover:shadow-lg hover:border-amber-400/50 transition group backdrop-blur-sm"
-            onClick={() => setShowModalControleCaixa(true)}
-            title="Caixa"
-          >
-            <DollarSign className="text-amber-400 mb-2 group-hover:scale-110 transition" />
-            <span className="text-xs font-bold uppercase text-gray-300 group-hover:text-white">Caixa</span>
-          </button>
-          <button
-            className="flex flex-col items-center justify-center p-4 bg-[#1E293B]/70 rounded-xl border border-white/10 shadow-sm hover:shadow-lg hover:border-purple-400/50 transition group backdrop-blur-sm"
-            onClick={() => {
-              setTela('admin');
-              setSecaoAdmin('mensalistas');
-            }}
-            title="Mensalistas"
-          >
-            <Users className="text-purple-400 mb-2 group-hover:scale-110 transition" />
-            <span className="text-xs font-bold uppercase text-gray-300 group-hover:text-white">Mensalistas</span>
-          </button>
-        </section>
-
-        {/* Dashboard Stats - Métricas do Dia */}
-        <CardGrid columns={4} gap="lg" style={{ marginBottom: DESIGN.spacing.lg }}>
-          <Card variant="primary" padding="lg">
-            <div style={{ textAlign: 'center' }}>
-              <p style={{ 
-                fontSize: DESIGN.typography.sizes.sm, 
-                color: DESIGN.colors.primary[600],
-                fontWeight: '600',
-                textTransform: 'uppercase',
-                marginBottom: DESIGN.spacing.sm
-              }}>
-                Entradas
-              </p>
-              <p style={{
-                fontSize: '2.5rem',
-                fontWeight: '700',
-                color: DESIGN.colors.primary[900],
-                margin: 0
-              }}>
-                {veiculos.length}
-              </p>
-              <p style={{
-                fontSize: DESIGN.typography.sizes.xs,
-                color: DESIGN.colors.primary[700],
-                marginTop: DESIGN.spacing.xs
-              }}>
-                veículos no pátio
-              </p>
-            </div>
-          </Card>
-
-          <Card variant="success" padding="lg">
-            <div style={{ textAlign: 'center' }}>
-              <p style={{ 
-                fontSize: DESIGN.typography.sizes.sm, 
-                color: DESIGN.colors.success[600],
-                fontWeight: '600',
-                textTransform: 'uppercase',
-                marginBottom: DESIGN.spacing.sm
-              }}>
-                Arrecadado
-              </p>
-              <p style={{
-                fontSize: '2.5rem',
-                fontWeight: '700',
-                color: DESIGN.colors.success[900],
-                margin: 0
-              }}>
-                R$ {totalArrecadadoDia.toFixed(2)}
-              </p>
-              <p style={{
-                fontSize: DESIGN.typography.sizes.xs,
-                color: DESIGN.colors.success[700],
-                marginTop: DESIGN.spacing.xs
-              }}>
-                total do dia
-              </p>
-            </div>
-          </Card>
-
-          <Card variant="warning" padding="lg">
-            <div style={{ textAlign: 'center' }}>
-              <p style={{ 
-                fontSize: DESIGN.typography.sizes.sm, 
-                color: DESIGN.colors.warning[600],
-                fontWeight: '600',
-                textTransform: 'uppercase',
-                marginBottom: DESIGN.spacing.sm
-              }}>
-                Caixa Inicial
-              </p>
-              <p style={{
-                fontSize: '2.5rem',
-                fontWeight: '700',
-                color: DESIGN.colors.warning[900],
-                margin: 0
-              }}>
-                R$ {caixaInicialAtual.toFixed(2)}
-              </p>
-              <p style={{
-                fontSize: DESIGN.typography.sizes.xs,
-                color: DESIGN.colors.warning[700],
-                marginTop: DESIGN.spacing.xs
-              }}>
-                fundo de troco
-              </p>
-            </div>
-          </Card>
-
-          <Card variant="default" padding="lg">
-            <div style={{ textAlign: 'center' }}>
-              <p style={{ 
-                fontSize: DESIGN.typography.sizes.sm, 
-                color: DESIGN.colors.neutral[600],
-                fontWeight: '600',
-                textTransform: 'uppercase',
-                marginBottom: DESIGN.spacing.sm
-              }}>
-                Total em Caixa
-              </p>
-              <p style={{
-                fontSize: '2.5rem',
-                fontWeight: '700',
-                color: DESIGN.colors.neutral[900],
-                margin: 0
-              }}>
-                R$ {totalCaixaAtual.toFixed(2)}
-              </p>
-              <p style={{
-                fontSize: DESIGN.typography.sizes.xs,
-                color: DESIGN.colors.neutral[700],
-                marginTop: DESIGN.spacing.xs
-              }}>
-                saldo atual
-              </p>
-            </div>
-          </Card>
-        </CardGrid>
-
-        {/* Abas: Patio, Saidas e Saida por Placa */}
-        <div className="flex gap-3 mb-6">
-          <button
-            onClick={() => setAbaHome('patio')}
-            className={`flex-1 py-4 rounded-lg font-bold text-lg shadow-md transition-all ${
-              abaHome === 'patio'
-                ? 'bg-blue-600 text-white scale-105'
-                : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
-            }`}
-          >
-            🅿️ PATIO ({veiculos.length})
-          </button>
-          <button
-            onClick={() => setAbaHome('saidas')}
-            className={`flex-1 py-4 rounded-lg font-bold text-lg shadow-md transition-all ${
-              abaHome === 'saidas'
-                ? 'bg-green-600 text-white scale-105'
-                : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
-            }`}
-          >
-            ✅ SAIDAS ({historico.length})
-          </button>
-          <button
-            onClick={() => setAbaHome('saida-placa')}
-            className={`flex-1 py-4 rounded-lg font-bold text-lg shadow-md transition-all ${
-              abaHome === 'saida-placa'
-                ? 'bg-amber-600 text-white scale-105'
-                : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
-            }`}
-          >
-            🔎 SAÍDA PLACA
-          </button>
-        </div>
-
-        {/* Entrada de Veículo */}
-        <div className="bg-[#1E293B]/70 backdrop-blur-md p-6 rounded-2xl shadow-2xl border border-white/10 mb-6">
-          <h2 className="text-xl font-bold mb-4 text-white">Registrar Entrada</h2>
-          
-          {/* Campo de Placa com Autocompletar */}
-          <div className="relative mb-4">
-            <Input
-              type="text"
-              value={placa}
-              onChange={(e) => handlePlacaChange(e.target.value)}
-              onBlur={() => setTimeout(() => setMostrarSugestoes(false), 200)}
-              onFocus={() => placa.length > 0 && setSugestoesPlacas(Object.keys(veiculosCadastrados).filter(p => 
-                p.replace('-', '').startsWith(placa.replace('-', ''))
-              ))}
-              onKeyPress={(e) => e.key === 'Enter' && registrarEntrada()}
-              placeholder="ABC-1234 ou ABC-1D23"
-              style={{ textAlign: 'center', fontWeight: 700, fontSize: '1.5rem', letterSpacing: '0.1em' }}
-              maxLength="8"
-              autoFocus
-            />
-            
-            {/* Dropdown de Sugestões */}
-            {mostrarSugestoes && sugestoesPlacas.length > 0 && (
-              <div className="absolute top-full left-0 right-0 bg-white border-2 border-blue-300 rounded-lg mt-1 shadow-lg z-10 max-h-48 overflow-y-auto">
-                {sugestoesPlacas.map((placaSug) => {
-                  const dados = veiculosCadastrados[placaSug];
-                  const placaFormatada = formatarPlaca(placaSug);
-                  return (
-                    <button
-                      key={placaSug}
-                      onClick={() => selecionarSugestao(placaSug)}
-                      className="w-full text-left px-4 py-3 hover:bg-blue-50 border-b last:border-b-0 transition-colors flex justify-between items-center"
-                    >
-                      <div>
-                        <p className="font-bold text-blue-900">{placaFormatada}</p>
-                        <p className="text-sm text-gray-600">{dados.modelo} • {dados.cor}</p>
-                      </div>
-                      <span className="text-blue-500 font-semibold">Usar</span>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-          
-          <Input
-            type="text"
-            value={modelo}
-            onChange={(e) => setModelo(e.target.value.toUpperCase())}
-            onKeyPress={(e) => e.key === 'Enter' && registrarEntrada()}
-            placeholder="Modelo (ex: Gol, Civic, Onix)"
-            style={{ textAlign: 'center', fontWeight: 600, marginTop: DESIGN.spacing.md, marginBottom: DESIGN.spacing.md }}
-          />
-          <Input
-            type="text"
-            value={cor}
-            onChange={(e) => setCor(e.target.value.toUpperCase())}
-            onKeyPress={(e) => e.key === 'Enter' && registrarEntrada()}
-            placeholder="Cor (ex: Branco, Preto, Prata)"
-            style={{ textAlign: 'center', fontWeight: 600, marginBottom: DESIGN.spacing.md }}
-          />
-          
-          {/* Seleção de Tipo de Veículo */}
-          <div className="flex gap-3 mb-4">
-            <button
-              onClick={() => setTipoVeiculo('carro')}
-              className={`flex-1 py-3 rounded-lg font-bold text-lg transition-all ${
-                tipoVeiculo === 'carro'
-                  ? 'bg-blue-600 text-white shadow-lg scale-105'
-                  : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
-              }`}
-            >
-              🚗 CARRO
-            </button>
-            <button
-              onClick={() => setTipoVeiculo('moto')}
-              className={`flex-1 py-3 rounded-lg font-bold text-lg transition-all ${
-                tipoVeiculo === 'moto'
-                  ? 'bg-green-600 text-white shadow-lg scale-105'
-                  : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
-              }`}
-            >
-              🏍️ MOTO
-            </button>
-          </div>
-          
-          <button
-            onClick={registrarEntrada}
-            className="w-full p-5 bg-blue-600 hover:bg-blue-700 text-white font-black text-lg rounded-xl shadow-lg shadow-blue-200 transition-all active:scale-95 uppercase"
-            style={{ marginTop: DESIGN.spacing.md }}
-          >
-            Registrar Entrada
-          </button>
-        </div>
-
-        {/* Veículos no Pátio */}
-        {abaHome === 'patio' && (
-        <div className="bg-[#1E293B]/70 backdrop-blur-md rounded-2xl shadow-2xl border border-white/10 p-4">
-          <h2 className="text-xl font-bold mb-4 flex items-center gap-2 text-white">
-            <Car className="w-6 h-6" />
-            Veículos no Pátio ({veiculos.length})
-          </h2>
-          
-          {veiculos.length === 0 ? (
-            <p className="text-gray-500 text-center py-8">Nenhum veículo no pátio</p>
-          ) : (
-            <div className="space-y-3">
-              {veiculos.map((veiculo) => {
-                const tempoDecorrido = tempoAtual - veiculo.entrada;
-                const valorAtual = calcularValor(veiculo.entrada, tempoAtual, veiculo.tipo);
-                const emoji = veiculo.tipo === 'moto' ? '🏍️' : '🚗';
-                
-                return (
-                  <div key={veiculo.id} className="bg-gradient-to-r from-[#0B1120] to-[#1E293B] p-4 rounded-lg border border-white/10 shadow-lg mb-3">
-                    <div className="flex justify-between items-start mb-3">
-                      <div>
-                        <p className="text-2xl font-bold text-blue-300">
-                          {emoji} {veiculo.placa}
-                        </p>
-                        <p className="text-sm text-gray-400 mt-1">
-                          {veiculo.modelo} • {veiculo.cor}
-                        </p>
-                        <p className="text-sm text-gray-400 flex items-center gap-1 mt-1">
-                          <Clock className="w-4 h-4" />
-                          Entrada: {new Date(veiculo.entrada).toLocaleTimeString('pt-BR')}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-3xl font-bold text-emerald-400">
-                          R$ {valorAtual.toFixed(2)}
-                        </p>
-                      </div>
-                    </div>
-                    
-                    <div className="bg-[#050A14] p-3 rounded-lg mb-3 border border-white/5">
-                      <p className="text-center text-2xl font-mono font-bold text-blue-200">
-                        {formatarTempo(tempoDecorrido)}
-                      </p>
-                      <p className="text-center text-xs text-gray-500 mt-1">Tempo decorrido</p>
-                    </div>
-                    
-                    <div style={{ display: 'flex', gap: DESIGN.spacing.sm }}>
-                      {(impressoraConectada || impressoraUSBConectada) && (
-                        <Button 
-                          onClick={() => imprimirEntrada(veiculo)}
-                          variant="primary"
-                          fullWidth
-                          style={{ backgroundColor: DESIGN.colors.primary[600] }}
-                        >
-                          <Printer className="w-5 h-5" style={{ marginRight: DESIGN.spacing.xs }} />
-                          Imprimir
-                        </Button>
-                      )}
-                      <Button 
-                        onClick={() => finalizarSaida(veiculo)}
-                        variant="primary"
-                        fullWidth
-                      >
-                        <LogOut className="w-5 h-5" style={{ marginRight: DESIGN.spacing.xs }} />
-                        FINALIZAR / SAÍDA
-                      </Button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-        )}
-
-        {abaHome === 'saida-placa' && (
-        <div className="card">
-          <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-            <LogOut className="w-6 h-6 text-amber-600" />
-            Registrar Saída por Placa
-          </h2>
-          <p className="text-sm text-gray-600 mb-4">
-            Digite a placa e finalize rapidamente sem procurar na lista do pátio.
-          </p>
-
-          <Input
-            type="text"
-            value={placaSaida}
-            onChange={(e) => setPlacaSaida(formatarPlaca(e.target.value.toUpperCase()))}
-            onKeyPress={(e) => e.key === 'Enter' && registrarSaidaPorPlaca()}
-            placeholder="ABC-1234 ou ABC-1D23"
-            style={{ textAlign: 'center', fontWeight: 700, fontSize: '1.5rem', letterSpacing: 'wider', marginBottom: DESIGN.spacing.md }}
-            maxLength="8"
-          />
-
-          <Button
-            variant="primary"
-            fullWidth
-            onClick={registrarSaidaPorPlaca}
-            size="lg"
-            style={{ fontSize: '1.125rem', marginTop: DESIGN.spacing.md }}
-          >
-            LOCALIZAR E FINALIZAR SAÍDA
-          </Button>
-        </div>
-        )}
-
-        {/* Histórico de Saidas */}
-        {abaHome === 'saidas' && (
-        <div className="card">
-          <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-            <History className="w-6 h-6 text-green-600" />
-            Veículos que Saíram ({historico.length})
-          </h2>
-          {usarVirtualizacaoHistorico ? (
-            <>
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '90px 1fr 100px 110px 110px 120px 110px',
-                  gap: DESIGN.spacing.sm,
-                  padding: `${DESIGN.spacing.sm}px ${DESIGN.spacing.md}px`,
-                  border: `1px solid ${DESIGN.colors.neutral[200]}`,
-                  borderBottom: 'none',
-                  borderRadius: `${DESIGN.border.radius.md} ${DESIGN.border.radius.md} 0 0`,
-                  backgroundColor: DESIGN.colors.neutral[100],
-                  fontWeight: '700',
-                  color: DESIGN.colors.neutral[800],
-                  fontSize: DESIGN.typography.sizes.sm
-                }}
-              >
-                <span>Placa</span>
-                <span>Modelo</span>
-                <span>Tipo</span>
-                <span>Entrada</span>
-                <span>Saída</span>
-                <span>Permanência</span>
-                <span style={{ textAlign: 'right' }}>Valor</span>
-              </div>
-
-              <VirtualizedList
-                items={historicoGridData}
-                itemHeight={52}
-                height={520}
-                keyExtractor={(item) => item.id}
-                renderItem={(item) => (
-                  <div
-                    style={{
-                      display: 'grid',
-                      gridTemplateColumns: '90px 1fr 100px 110px 110px 120px 110px',
-                      gap: DESIGN.spacing.sm,
-                      width: '100%',
-                      alignItems: 'center',
-                      fontSize: DESIGN.typography.sizes.sm,
-                      color: '#f1f5f9'
-                    }}
-                  >
-                    <span>{item.placa}</span>
-                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.modelo}</span>
-                    <span>{item.tipo}</span>
-                    <span>{item.entrada}</span>
-                    <span>{item.saida}</span>
-                    <span>{item.permanencia}</span>
-                    <span style={{ textAlign: 'right', fontWeight: '600' }}>{item.valor}</span>
-                  </div>
-                )}
-                emptyState={
-                  <div style={{ textAlign: 'center', padding: `${DESIGN.spacing.lg}px` }}>
-                    <p style={{ color: DESIGN.colors.neutral[500] }}>Nenhum registro de saída</p>
-                  </div>
-                }
-                style={{ borderRadius: `0 0 ${DESIGN.border.radius.md} ${DESIGN.border.radius.md}` }}
-              />
-              <p style={{ marginTop: DESIGN.spacing.sm, color: DESIGN.colors.neutral[600], fontSize: DESIGN.typography.sizes.xs }}>
-                Modo otimizado ativo: virtualização para grandes volumes de histórico.
-              </p>
-            </>
-          ) : (
-            <DataGrid
-               columns={colunasHistorico}
-              data={historicoGridData}
-              sortable
-              hover
-              striped
-              emptyState={
-                <div style={{ textAlign: 'center', padding: `${DESIGN.spacing.lg}px` }}>
-                  <p style={{ color: DESIGN.colors.neutral[500] }}>Nenhum registro de saída</p>
-                </div>
-              }
-            />
-          )}
-        </div>
-        )}
-      </div>
-
-      {/* Modal de Confirmação de Saída */}
-      {veiculoSelecionado && (
+        {/* Modal de Confirmação de Saída */}
+        {veiculoSelecionado && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg shadow-2xl max-w-md w-full p-6">
             <h2 className="text-2xl font-bold mb-4 text-center flex items-center justify-center gap-2">
@@ -3612,6 +3043,7 @@ ${'='.repeat(50)}
       />
       {renderModalControleCaixa()}
       {renderRelatorioFechamento()}
+      </div>
     </div>
   );
 }

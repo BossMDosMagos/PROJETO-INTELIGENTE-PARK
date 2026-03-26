@@ -1,8 +1,9 @@
 import React from 'react';
-import { DollarSign, Car, Trash2 } from 'lucide-react';
+import { DollarSign, Car, Trash2, ToggleLeft, ToggleRight } from 'lucide-react';
 import { Button } from '../Button';
 import { Input, Select } from '../Input';
 import DESIGN from '../../design-system';
+import CalculadoraSimulacao from './CalculadoraSimulacao';
 
 const TabelaPrecos = ({
   config,
@@ -35,13 +36,34 @@ const TabelaPrecos = ({
           <DollarSign className="w-6 h-6" />
           Preços por Fração de Tempo
         </h2>
-        <div className="grid md:grid-cols-2 gap-6">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
           <div>
             <Input
               type="number"
-              label="Tempo da Fração (minutos)"
-              value={config.tempoFracao}
-              onChange={(e) => setConfig({...config, tempoFracao: parseInt(e.target.value)})}
+              label="Valor 1ª Hora (R$)"
+              value={config.valor_primeira_hora || 15}
+              onChange={(e) => setConfig({...config, valor_primeira_hora: parseFloat(e.target.value)})}
+              min="0"
+              step="0.01"
+              className="bg-[#0F172A] border-slate-700 text-white focus:border-emerald-500"
+            />
+          </div>
+          <div>
+            <Input
+              type="number"
+              label="Tolerância Inicial (min)"
+              value={config.tolerancia_inicial || 30}
+              onChange={(e) => setConfig({...config, tolerancia_inicial: parseInt(e.target.value)})}
+              min="0"
+              className="bg-[#0F172A] border-slate-700 text-white focus:border-emerald-500"
+            />
+          </div>
+          <div>
+            <Input
+              type="number"
+              label="Fração Hora (minutos)"
+              value={config.fracao_hora_minutos || 30}
+              onChange={(e) => setConfig({...config, fracao_hora_minutos: parseInt(e.target.value)})}
               min="1"
               className="bg-[#0F172A] border-slate-700 text-white focus:border-emerald-500"
             />
@@ -61,7 +83,7 @@ const TabelaPrecos = ({
             <Input
               type="number"
               step="0.01"
-              label="Valor do Teto/Diária (R$)"
+              label="Valor do Teto (R$)"
               value={config.valorTeto}
               onChange={(e) => setConfig({...config, valorTeto: parseFloat(e.target.value)})}
               min="0"
@@ -72,23 +94,58 @@ const TabelaPrecos = ({
             <Input
               type="number"
               label="Ciclo do Teto (horas)"
-              value={config.cicloTeto / 60}
-              onChange={(e) => setConfig({...config, cicloTeto: parseInt(e.target.value) * 60})}
+              value={config.valor_teto_horas || 12}
+              onChange={(e) => setConfig({...config, valor_teto_horas: parseInt(e.target.value)})}
               min="1"
               className="bg-[#0F172A] border-slate-700 text-white focus:border-emerald-500"
             />
           </div>
+        </div>
 
-          {/* Divisor */}
-          <div className="md:col-span-2 border-t border-slate-700 py-4 mt-2">
-            <p className="text-center font-bold text-slate-400 text-sm tracking-widest uppercase">VALORES PARA MOTO (50% do carro)</p>
+        <div className="mt-6 p-4 bg-slate-800/50 rounded-xl border border-slate-700">
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="font-bold text-white flex items-center gap-2">
+                <span className="text-2xl">⚡</span>
+                Cobrar Adicional após Teto
+              </h4>
+              <p className="text-sm text-slate-400 mt-1">
+                Após atingir o teto, cobra frações adicionais ao invés de parar
+              </p>
+            </div>
+            <button
+              onClick={() => setConfig({...config, cobrar_adicional_teto: !config.cobrar_adicional_teto})}
+              className={`w-16 h-10 rounded-full flex items-center px-1 transition-all ${
+                config.cobrar_adicional_teto 
+                  ? 'bg-emerald-500 justify-end' 
+                  : 'bg-slate-600 justify-start'
+              }`}
+            >
+              <div className={`w-8 h-8 rounded-full bg-white shadow-lg flex items-center justify-center transition-all ${
+                config.cobrar_adicional_teto ? 'text-emerald-500' : 'text-slate-400'
+              }`}>
+                {config.cobrar_adicional_teto ? 'ON' : 'OFF'}
+              </div>
+            </button>
           </div>
+          {config.cobrar_adicional_teto && (
+            <div className="mt-3 text-sm text-emerald-400 bg-emerald-900/20 p-3 rounded-lg border border-emerald-700/30">
+              ✅ Ativo! Fórmula: <strong>Total = (Ciclos × Teto) + (Frações Extras × Valor Fração)</strong>
+            </div>
+          )}
+        </div>
 
+        {/* Divisor para Moto */}
+        <div className="border-t border-slate-700 py-4 mt-2">
+          <p className="text-center font-bold text-slate-400 text-sm tracking-widest uppercase">VALORES PARA MOTO</p>
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-4">
           <div>
             <Input
               type="number"
               step="0.01"
-              label="Valor da Fração Moto (R$) 🏍️"
+              label="Valor da Fração Moto (R$)"
               value={config.valorFracaoMoto}
               onChange={(e) => setConfig({...config, valorFracaoMoto: parseFloat(e.target.value)})}
               min="0"
@@ -99,17 +156,28 @@ const TabelaPrecos = ({
             <Input
               type="number"
               step="0.01"
-              label="Valor do Teto Moto (R$) 🏍️"
+              label="Valor do Teto Moto (R$)"
               value={config.valorTetoMoto}
               onChange={(e) => setConfig({...config, valorTetoMoto: parseFloat(e.target.value)})}
               min="0"
               className="bg-[#0F172A] border-slate-700 text-white focus:border-emerald-500"
             />
           </div>
+          <div>
+            <Input
+              type="number"
+              label="Percentual Moto (%)"
+              value={config.percentual_moto || 50}
+              onChange={(e) => setConfig({...config, percentual_moto: parseFloat(e.target.value)})}
+              min="0"
+              max="100"
+              className="bg-[#0F172A] border-slate-700 text-white focus:border-emerald-500"
+            />
+          </div>
 
           <div className="md:col-span-2 bg-emerald-900/20 p-4 rounded-lg border border-emerald-700/30">
             <p className="text-sm text-emerald-400">
-              ✅ <strong>Salvo automaticamente!</strong> Configure os preços de fração e teto para veículos regulares.
+              ✅ <strong>Salvo automaticamente!</strong> Configure os preços de fração e teto para veículos.
             </p>
           </div>
         </div>
@@ -335,6 +403,9 @@ const TabelaPrecos = ({
           </p>
         </div>
       </div>
+
+      {/* SEÇÃO 4: CALCULADORA DE SIMULAÇÃO */}
+      <CalculadoraSimulacao config={config} />
 
     </div>
   );

@@ -6,8 +6,21 @@
 @tailwind utilities;
 
 @layer base {
-  body {
+  html, body {
     @apply bg-[#050A14] text-gray-100;
+    overflow: hidden;
+    height: 100%;
+  }
+}
+
+@keyframes pulse-vermelho {
+  0%, 100% {
+    opacity: 1;
+    text-shadow: 0 0 10px rgba(239, 68, 68, 0.8);
+  }
+  50% {
+    opacity: 0.7;
+    text-shadow: 0 0 20px rgba(239, 68, 68, 1);
   }
 }
 
@@ -39,4 +52,72 @@
     -webkit-text-fill-color: white !important;
     caret-color: white !important;
   }
+}
+
+/* Input Visual de Placa */
+.input-placa-container {
+  position: relative;
+  width: 280px;
+  height: 80px;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+}
+
+.input-placa-container.mercosul {
+  background-image: url('/img/NOVA.png');
+}
+
+.input-placa-container.antiga {
+  background-image: url('/img/ANTIGA.png');
+}
+
+.input-placa {
+  background: transparent !important;
+  border: none !important;
+  outline: none !important;
+  font-size: 28px;
+  font-weight: bold;
+  letter-spacing: 4px;
+  text-align: center;
+  color: #1a1a1a;
+  width: 230px;
+  height: 50px;
+  caret-color: #1a1a1a;
+}
+
+.input-placa::placeholder {
+  color: #666;
+  opacity: 0.5;
+}
+
+/* Fonte Mercosul */
+.fonte-mercosul {
+  font-family: 'FE-Schrift', 'Arial Black', sans-serif !important;
+  font-weight: normal !important;
+}
+
+/* Fonte Placa Antiga */
+.fonte-antiga {
+  font-family: 'Mandatory', 'Impact', sans-serif !important;
+  font-weight: normal !important;
+}
+
+/* Definição das fontes das placas */
+@font-face {
+  font-family: 'FE-Schrift';
+  src: url('/fonts/FE-Schrift.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Mandatory';
+  src: url('/fonts/Mandatory.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
 }
