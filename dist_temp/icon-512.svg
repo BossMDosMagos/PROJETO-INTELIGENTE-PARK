@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#1e40af" rx="75"/>
+  <g transform="translate(256, 256)">
+    <!-- Ícone de carro simplificado -->
+    <rect x="-135" y="-40" width="270" height="80" fill="white" rx="15"/>
+    <circle cx="-80" cy="40" r="32" fill="white"/>
+    <circle cx="80" cy="40" r="32" fill="white"/>
+    <circle cx="-80" cy="40" r="16" fill="#1e40af"/>
+    <circle cx="80" cy="40" r="16" fill="#1e40af"/>
+    <text x="0" y="15" font-family="Arial, sans-serif" font-size="70" font-weight="bold" fill="#1e40af" text-anchor="middle">P</text>
+  </g>
+</svg>
