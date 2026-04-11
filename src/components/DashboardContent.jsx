@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Car, ArrowUpCircle, ArrowDownCircle, Clock, DollarSign } from 'lucide-react';
+import { Car, ArrowUpCircle, ArrowDownCircle, Clock, DollarSign, Trash2 } from 'lucide-react';
 
 export default function DashboardContent({
   veiculos = [],
   historico = [],
   config = {},
   onRegistrarEntrada = () => {},
-  onRegistrarSaida = () => {}
+  onRegistrarSaida = () => {},
+  onLimparVeiculoOrfao = () => {},
+  showToast = () => {}
 }) {
   const [placa, setPlaca] = useState('');
   const [modelo, setModelo] = useState('');
@@ -14,11 +16,17 @@ export default function DashboardContent({
   const [tipoVeiculo, setTipoVeiculo] = useState('carro');
   const [placaSaida, setPlacaSaida] = useState('');
   const [tempoAtual, setTempoAtual] = useState(Date.now());
+  const [saidaSelecionada, setSaidaSelecionada] = useState(null);
 
   useEffect(() => {
     const intervalo = setInterval(() => setTempoAtual(Date.now()), 1000);
     return () => clearInterval(intervalo);
   }, []);
+
+  const selecionarVeiculoParaSaida = (veiculo) => {
+    setPlacaSaida(veiculo.placa);
+    setSaidaSelecionada(veiculo.id);
+  };
 
   // Função de cálculo de valor
   const calcularValor = (entrada) => {
@@ -70,6 +78,14 @@ export default function DashboardContent({
     const cleaned = valor.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
     if (cleaned.length <= 3) return cleaned;
     return cleaned.slice(0, 3) + '-' + cleaned.slice(3, 7);
+  };
+
+  const formatarTempo = (ms) => {
+    if (!ms || ms <= 0) return '0:00:00';
+    const segundos = Math.floor(ms / 1000);
+    const minutos = Math.floor(segundos / 60);
+    const horas = Math.floor(minutos / 60);
+    return `${String(horas).padStart(2, '0')}:${String(minutos % 60).padStart(2, '0')}:${String(segundos % 60).padStart(2, '0')}`;
   };
 
   const tipoPlaca = getTipoPlaca(placa);
@@ -186,18 +202,40 @@ export default function DashboardContent({
 
         <button
           onClick={() => {
-            if (placaSaida.length >= 7) {
+            if (placaSaida) {
               onRegistrarSaida(placaSaida);
               setPlacaSaida('');
+              setSaidaSelecionada(null);
             }
           }}
-          className="w-full p-4 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white font-bold rounded-xl shadow-lg shadow-amber-500/30 transition-all active:scale-95"
+          className={`w-full p-4 font-bold rounded-xl shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 ${
+            saidaSelecionada
+              ? 'bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 text-white shadow-green-500/30'
+              : 'bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white shadow-amber-500/30'
+          }`}
         >
-          <span className="flex items-center justify-center gap-2">
-            <ArrowDownCircle className="w-5 h-5" />
-            REGISTRAR SAÍDA
-          </span>
+          <ArrowDownCircle className="w-5 h-5" />
+          {saidaSelecionada ? 'REGISTRAR SAÍDA ✓' : 'REGISTRAR SAÍDA'}
         </button>
+
+        {/* Botão para limpar veículo órfão */}
+        <div className="mt-4 pt-4 border-t border-white/10">
+          <button
+            onClick={() => {
+              const placa = prompt('Digite a placa do veículo órfão para remover:');
+              if (placa && placa.trim()) {
+                onLimparVeiculoOrfao(placa.trim().toUpperCase());
+              }
+            }}
+            className="w-full p-3 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 font-bold rounded-lg transition-all active:scale-95 flex items-center justify-center gap-2"
+          >
+            <Trash2 className="w-4 h-4" />
+            Limpar Veículo Órfão
+          </button>
+          <p className="text-xs text-gray-500 text-center mt-2">
+            Use se o veículo não aparece nos mini-cards
+          </p>
+        </div>
       </div>
 
       {/* Card 2 - Status/Dinâmico (Direita) */}
@@ -229,6 +267,30 @@ export default function DashboardContent({
           </div>
         </div>
 
+        {/* Últimas Saídas */}
+        {historico.length > 0 && (
+          <div className="mb-4">
+            <h3 className="text-sm font-semibold text-gray-400 mb-2">Últimas Saídas</h3>
+            <div className="space-y-2 max-h-[150px] overflow-y-auto">
+              {historico.slice(0, 5).map((h, i) => (
+                <div key={h.id || i} className="flex items-center justify-between p-2 bg-emerald-900/20 rounded-lg border border-emerald-700/30">
+                  <div className="flex items-center gap-2">
+                    <span className="text-emerald-400">✓</span>
+                    <span className="font-bold text-white text-sm">{h.placa}</span>
+                    <span className="text-gray-400 text-xs">{h.modelo}</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-emerald-400 font-bold text-sm">R$ {Number(h.valor || 0).toFixed(2)}</span>
+                    <span className="text-gray-500 text-xs block">
+                      {h.permanencia ? formatarTempo(h.permanencia) : '0:00:00'}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Lista de Veículos Recentes */}
         <div className="flex-1 overflow-hidden">
           <h3 className="text-sm font-semibold text-gray-400 mb-2">Veículos no Pátio</h3>
@@ -242,15 +304,22 @@ export default function DashboardContent({
               const tempoFormatado = `${String(horas).padStart(2, '0')}:${String(minutos).padStart(2, '0')}:${String(segundos).padStart(2, '0')}`;
               const valor = v.isMensalista ? 0 : calcularValor(entrada);
               
+              const isSelecionado = saidaSelecionada === v.id;
+              
               return (
-                <div key={v.id || i} className="p-4 bg-[#1E293B]/50 rounded-xl border border-white/5 hover:border-cyan-500/30 transition-all">
+                <div 
+                  key={v.id || i} 
+                  onClick={() => selecionarVeiculoParaSaida(v)}
+                  className={`p-4 rounded-xl border transition-all cursor-pointer ${
+                    isSelecionado 
+                      ? 'bg-cyan-900/50 border-cyan-500 shadow-lg shadow-cyan-500/20' 
+                      : 'bg-[#1E293B]/50 border-white/5 hover:border-cyan-500/30'
+                  }`}
+                >
                   <div className="flex items-center justify-between mb-2">
-                    <div>
+                    <div className="flex items-center gap-2">
+                      {isSelecionado && <span className="text-cyan-400">✓</span>}
                       <div className="font-bold text-white text-xl">{v.placa}</div>
-                      <div className="text-sm text-gray-400">
-                        {v.modelo || 'Não informado'} {v.cor ? `- ${v.cor}` : ''}
-                        {v.isMensalista && <span className="text-emerald-400 ml-2">📋 Mensalista</span>}
-                      </div>
                     </div>
                     <div className="text-right">
                       <div 
@@ -262,9 +331,9 @@ export default function DashboardContent({
                     </div>
                   </div>
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-gray-400 text-sm">
-                      <Clock className="w-4 h-4" />
-                      Tempo:
+                    <div className="text-sm text-gray-400">
+                      {v.modelo || 'Não informado'} {v.cor ? `- ${v.cor}` : ''}
+                      {v.isMensalista && <span className="text-emerald-400 ml-2">📋</span>}
                     </div>
                     <div 
                       className="text-xl font-mono font-bold text-emerald-400"
@@ -273,6 +342,11 @@ export default function DashboardContent({
                       {tempoFormatado}
                     </div>
                   </div>
+                  {isSelecionado && (
+                    <div className="mt-2 text-center text-cyan-400 text-sm font-semibold">
+                      👆 Clique em "REGISTRAR SAÍDA ✓"
+                    </div>
+                  )}
                 </div>
               );
             })}

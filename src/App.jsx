@@ -937,6 +937,7 @@ function App() {
     console.log('   modelo:', modeloInput);
     console.log('   cor:', corInput);
     console.log('   tipoVeiculo:', tipoVeiculoInput);
+    console.log('   Veículos no pátio atualmente:', veiculos.map(v => v.placa));
     
     const placaFormatada = placaInput.trim().toUpperCase();
     
@@ -1259,17 +1260,16 @@ ${'='.repeat(50)}
     setVeiculoSelecionado(null);
   };
 
-  const registrarSaidaPorPlaca = () => {
-    const placaDigitada = formatarPlaca(placaSaida.trim().toUpperCase());
-
+  const registrarSaidaPorPlaca = (placaDigitada) => {
     if (!placaDigitada) {
       showToast('Digite a placa para registrar a saída.', 'error');
       return;
     }
 
-    const placaSemTraco = placaDigitada.replace('-', '');
+    const placaLimpa = placaDigitada.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+    
     const veiculoEncontrado = veiculos.find(
-      (v) => v.placa.replace('-', '').toUpperCase() === placaSemTraco
+      (v) => v.placa.replace(/[^A-Za-z0-9]/g, '').toUpperCase() === placaLimpa
     );
 
     if (!veiculoEncontrado) {
@@ -1277,8 +1277,71 @@ ${'='.repeat(50)}
       return;
     }
 
+    const saida = Date.now();
+    const valor = veiculoEncontrado.isMensalista ? 0 : calcularValor(veiculoEncontrado.entrada, saida, veiculoEncontrado.tipo);
+    const permanencia = formatarTempo(saida - veiculoEncontrado.entrada);
+    const registro = {
+      ...veiculoEncontrado,
+      saida,
+      valor,
+      permanencia: saida - veiculoEncontrado.entrada
+    };
+    
+    // Imprimir ticket de saída automaticamente
+    console.log('=== REGISTRANDO SAÍDA ===');
+    console.log('Veículo:', veiculoEncontrado);
+    console.log('Valor calculado:', valor);
+    console.log('Permanência:', permanencia);
+    console.log('Impressora USB:', impressoraUSBConectada);
+    console.log('Impressora BT:', impressoraConectada);
+    
+    if (impressoraConectada || impressoraUSBConectada) {
+      imprimirSaida(registro, permanencia, valor);
+      showToast(`✅ Saída registrada! Ticket impresso. Valor: R$ ${valor.toFixed(2)}`, 'success');
+    } else {
+      showToast(`✅ Saída registrada! Valor: R$ ${valor.toFixed(2)}`, 'success');
+    }
+
+    // Sincronizar com Supabase
+    supabaseService.registrarSaida({
+      placa: registro.placa,
+      horaEntrada: new Date(registro.entrada).toISOString(),
+      horaSaida: new Date(registro.saida).toISOString(),
+      valor: registro.valor,
+      tipo: registro.tipo,
+      isMensalista: registro.isMensalista
+    });
+
+    setHistorico([registro, ...historico]);
+    
+    // Remover veículo do pátio
+    console.log('=== REMOVENDO VEÍCULO ===');
+    console.log('Veículos antes:', veiculos.length, veiculos.map(v => v.placa));
+    const veiculosAtualizados = veiculos.filter(v => v.id !== veiculoEncontrado.id);
+    console.log('Veículos depois:', veiculosAtualizados.length, veiculosAtualizados.map(v => v.placa));
+    console.log('ID removido:', veiculoEncontrado.id);
+    setVeiculos(veiculosAtualizados);
     setPlacaSaida('');
-    finalizarSaida(veiculoEncontrado);
+  };
+
+  // Limpar veículo órfão por placa (quando não aparece nos mini-cards)
+  const limparVeiculoOrfao = (placa) => {
+    const placaLimpa = placa.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+    const veiculosOrfaos = veiculos.filter(v => 
+      v.placa.replace(/[^A-Za-z0-9]/g, '').toUpperCase() === placaLimpa
+    );
+    
+    if (veiculosOrfaos.length > 0) {
+      abrirConfirmacao(
+        `Deseja remover o veículo ${veiculosOrfaos[0].placa} do pátio?`,
+        () => {
+          setVeiculos(veiculos.filter(v => v.id !== veiculosOrfaos[0].id));
+          showToast('Veículo órfão removido do pátio!', 'success');
+        }
+      );
+    } else {
+      showToast('Veículo não encontrado no pátio!', 'warning');
+    }
   };
 
   const carregarDadosOperadores = async () => {
@@ -1999,9 +2062,20 @@ ${'='.repeat(50)}
   };
 
   const imprimirSaida = (veiculo, permanencia, valor) => {
+    console.log('=== IMPRIMIR SAÍDA ===');
+    console.log('Veículo:', veiculo);
+    console.log('Permanência:', permanencia);
+    console.log('Valor:', valor);
+    console.log('USB Conectada:', impressoraUSBConectada);
+    console.log('BT Conectada:', impressoraConectada);
+    console.log('Impressora USB:', impressoraUSB);
+    console.log('Impressora BT:', impressora);
+    
     if (impressoraUSBConectada) {
+      console.log('Chamando imprimirReciboSaidaUSB...');
       imprimirReciboSaidaUSB(veiculo, permanencia, valor);
     } else if (impressoraConectada) {
+      console.log('Chamando imprimirReciboSaida...');
       imprimirReciboSaida(veiculo, permanencia, valor);
     } else {
       showToast('Nenhuma impressora conectada. Conecte Bluetooth ou USB.', 'warning');
@@ -2918,6 +2992,8 @@ ${'='.repeat(50)}
               config={config}
               onRegistrarEntrada={registrarEntrada}
               onRegistrarSaida={registrarSaidaPorPlaca}
+              onLimparVeiculoOrfao={limparVeiculoOrfao}
+              showToast={showToast}
             />
           )}
         </ProLayout>
