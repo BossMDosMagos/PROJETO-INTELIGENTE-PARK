@@ -28,7 +28,8 @@ const TabelaPrecos = ({
   removerPrecoMensalista
 }) => {
   return (
-    <div className="space-y-6">
+    <div className="p-6 min-h-screen bg-[#050A14] overflow-auto">
+      <div className="max-w-6xl mx-auto space-y-6">
       
       {/* SEÇÃO 1: PREÇOS POR FRAÇÃO */}
       <div className="bg-[#1E293B]/40 backdrop-blur-xl rounded-xl p-6 border border-slate-800 shadow-xl">
@@ -407,6 +408,7 @@ const TabelaPrecos = ({
       {/* SEÇÃO 4: CALCULADORA DE SIMULAÇÃO */}
       <CalculadoraSimulacao config={config} />
 
+      </div>
     </div>
   );
 };

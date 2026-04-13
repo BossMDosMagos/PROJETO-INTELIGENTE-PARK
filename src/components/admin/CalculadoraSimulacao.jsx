@@ -9,71 +9,54 @@ const CalculadoraSimulacao = ({ config }) => {
   const [resultado, setResultado] = useState(null);
 
   const calcularSimulacao = () => {
+    // Usar valores do config ou defaults
+    const _valorTeto = config.valorTeto || 55;
+    const _percentualMoto = config.percentual_moto || 50;
+    const _cicloTetoHoras = config.valor_teto_horas || 12;
+    const _tolerancia = config.tolerancia_inicial || 30;
+    
     const diferencaMs = (tempoHoras * 60 + tempoMinutos) * 60 * 1000;
     const diferencaMinutos = Math.floor(diferencaMs / (1000 * 60));
     
-    let valorFracao, valorTeto, valorPrimeiraHora;
-    const percentualMoto = config.percentual_moto || 50;
-    
+    // Valor do teto para o tipo de veículo
+    let valorTeto;
     if (tipoVeiculo === 'moto') {
-      valorFracao = (config.valorFracao || 5) * (percentualMoto / 100);
-      valorTeto = (config.valorTeto || 55) * (percentualMoto / 100);
-      valorPrimeiraHora = (config.valor_primeira_hora || 15) * (percentualMoto / 100);
+      valorTeto = _valorTeto * (_percentualMoto / 100);
     } else {
-      valorFracao = config.valorFracao || 5;
-      valorTeto = config.valorTeto || 55;
-      valorPrimeiraHora = config.valor_primeira_hora || 15;
+      valorTeto = _valorTeto;
     }
     
-    const tempoFracao = config.fracao_hora_minutos || 30;
-    const tolerancia = config.tolerancia_inicial || 30;
-    const cicloTetoHoras = config.valor_teto_horas || 12;
-    const cicloTetoMinutos = cicloTetoHoras * 60;
-    const cobrarAdicional = config.cobrar_adicional_teto || false;
+    const cicloTetoMinutos = _cicloTetoHoras * 60;
     
-    const ciclosCompletos = Math.floor(diferencaMinutos / cicloTetoMinutos);
-    const minutosNoCicloAtual = diferencaMinutos % cicloTetoMinutos;
-    
-    let valorCicloAtual = 0;
-    let fracaoCobrada = 0;
-    
-    if (minutosNoCicloAtual <= tolerancia) {
-      valorCicloAtual = 0;
-      fracaoCobrada = 0;
-    } else {
-      const minutosAcimaDoGratuito = minutosNoCicloAtual - tolerancia;
-      fracaoCobrada = Math.ceil(minutosAcimaDoGratuito / tempoFracao);
-      let valorFracoesAtual = fracaoCobrada * valorFracao;
-      
-      if (minutosNoCicloAtual > cicloTetoMinutos && cobrarAdicional) {
-        const minutosExcedentes = minutosNoCicloAtual - cicloTetoMinutos;
-        const fracoesExtras = Math.ceil(minutosExcedentes / tempoFracao);
-        valorCicloAtual = valorTeto + (fracoesExtras * valorFracao);
-      } else {
-        valorCicloAtual = Math.min(valorFracoesAtual, valorTeto);
-      }
+    // Dentro da tolerância = gratuito
+    if (diferencaMinutos <= _tolerancia) {
+      setResultado({
+        tempoTotal: diferencaMinutos,
+        ciclosCompletos: 0,
+        minutosNoCiclo: diferencaMinutos,
+        valorTotal: 0,
+        isento: true
+      });
+      return;
     }
     
-    const ciclosCobrados = ciclosCompletos * valorTeto;
-    let valorTotal = ciclosCobrados + valorCicloAtual;
-    
-    if (ciclosCompletos > 0 && cobrarAdicional) {
-      valorTotal = ciclosCobrados + valorCicloAtual;
-    }
+    // Cada ciclo de 12h = 1 teto completo
+    // 12h = 55, 24h = 110, 36h = 165, etc.
+    const tetosCompletos = Math.floor(diferencaMinutos / cicloTetoMinutos);
+    const valorTotal = tetosCompletos * valorTeto;
     
     setResultado({
       tempoTotal: diferencaMinutos,
-      ciclosCompletos,
-      minutosNoCiclo: minutosNoCicloAtual,
-      fracaoCobrada,
-      valorCiclo: valorCicloAtual,
-      ciclosCobrados,
-      valorTotal: Math.max(0, valorTotal),
-      isento: minutosNoCicloAtual <= tolerancia
+      ciclosCompletos: tetosCompletos,
+      minutosNoCiclo: diferencaMinutos % cicloTetoMinutos,
+      valorTotal,
+      isento: false
     });
   };
 
   useEffect(() => {
+    console.log('Calculadora - config:', config);
+    console.log('Calculadora - tempoHoras:', tempoHoras, 'tempoMinutos:', tempoMinutos);
     calcularSimulacao();
   }, [tempoHoras, tempoMinutos, tipoVeiculo, config]);
 
@@ -177,22 +160,12 @@ const CalculadoraSimulacao = ({ config }) => {
                 <span className="text-white">{resultado.ciclosCompletos}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-slate-400">Minutos no ciclo atual:</span>
-                <span className="text-white">{resultado.minutosNoCiclo} min</span>
+                <span className="text-slate-400">Tetos completos (12h):</span>
+                <span className="text-white">{resultado.ciclosCompletos}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-slate-400">Frações cobradas:</span>
-                <span className="text-white">{resultado.fracaoCobrada}</span>
-              </div>
-              {resultado.ciclosCompletos > 0 && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-slate-400">Valor ciclos completos:</span>
-                  <span className="text-orange-400">R$ {resultado.ciclosCobrados.toFixed(2)}</span>
-                </div>
-              )}
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-400">Valor ciclo atual:</span>
-                <span className="text-orange-400">R$ {resultado.valorCiclo.toFixed(2)}</span>
+                <span className="text-slate-400">Valor tetos:</span>
+                <span className="text-orange-400">R$ {(resultado.ciclosCompletos * (config.valorTeto || 55)).toFixed(2)}</span>
               </div>
             </div>
           </div>
@@ -210,7 +183,7 @@ const CalculadoraSimulacao = ({ config }) => {
             ) : (
               <>
                 <p className="text-sm text-slate-400 mb-1">VALOR A PAGAR</p>
-                <p className="text-4xl font-bold text-white">R$ {resultado.valorTotal.toFixed(2)}</p>
+                <p className="text-4xl font-bold text-white">R$ {resultado.valorTotal?.toFixed(2) || '0.00'}</p>
               </>
             )}
           </div>

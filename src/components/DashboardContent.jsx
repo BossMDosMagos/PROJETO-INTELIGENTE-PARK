@@ -28,39 +28,33 @@ export default function DashboardContent({
     setSaidaSelecionada(veiculo.id);
   };
 
-  // Função de cálculo de valor
-  const calcularValor = (entrada) => {
+  // Função de cálculo de valor - Cada 12h = 1 teto (não acumula)
+  const calcularValor = (entrada, tipoVeic = 'carro') => {
     const diferencaMs = tempoAtual - entrada;
     const diferencaMinutos = Math.floor(diferencaMs / (1000 * 60));
     
-    const tipo = 'carro';
-    let valorFracao, valorTeto;
-    if (tipo === 'moto') {
-      valorFracao = config.valorFracaoMoto || 4.50;
-      valorTeto = config.valorTetoMoto || 27.50;
+    // Usar valores da tabela de preços (config)
+    let valorTeto;
+    if (tipoVeic === 'moto') {
+      valorTeto = config.valorTetoMoto || (config.valorTeto ? config.valorTeto * 0.5 : 27.50);
     } else {
-      valorFracao = config.valorFracao || 9.00;
       valorTeto = config.valorTeto || 55.00;
     }
     
-    const tempoFracao = config.tempoFracao || 30;
-    const cicloTeto = config.cicloTeto || 720;
-    const tolerancia = config.toleranciaMinutos || 15;
+    // Ciclo do teto em minutos (padrão 12 horas = 720 min)
+    const cicloTetoMin = (config.valor_teto_horas || 12) * 60;
+    // Tolerância em minutos (padrão 30 min)
+    const tolerancia = config.tolerancia_inicial || 30;
     
+    // Dentro da tolerância = gratuito
     if (diferencaMinutos <= tolerancia) return 0;
     
-    const ciclosCompletos = Math.floor(diferencaMinutos / cicloTeto);
-    const minutosNoCicloAtual = diferencaMinutos % cicloTeto;
+    // Cada ciclo de 12h = 1 teto completo
+    // 0-12h = 55, 12-24h = 110, 24-36h = 165, etc.
+    const tetosCompletos = Math.floor(diferencaMinutos / cicloTetoMin);
+    const valor = tetosCompletos * valorTeto;
     
-    let valorCicloAtual = 0;
-    if (minutosNoCicloAtual > tolerancia) {
-      const minutosAcimaDoGratuito = minutosNoCicloAtual - tolerancia;
-      const fracoesNoCicloAtual = Math.ceil(minutosAcimaDoGratuito / tempoFracao);
-      const valorFracoesAtual = fracoesNoCicloAtual * valorFracao;
-      valorCicloAtual = Math.min(valorFracoesAtual, valorTeto);
-    }
-    
-    return (ciclosCompletos * valorTeto) + valorCicloAtual;
+    return valor;
   };
 
   // Detectar tipo de placa (Mercosul ou Antiga)
@@ -302,7 +296,7 @@ export default function DashboardContent({
               const minutos = Math.floor((tempo % 3600) / 60);
               const segundos = tempo % 60;
               const tempoFormatado = `${String(horas).padStart(2, '0')}:${String(minutos).padStart(2, '0')}:${String(segundos).padStart(2, '0')}`;
-              const valor = v.isMensalista ? 0 : calcularValor(entrada);
+              const valor = v.isMensalista ? 0 : calcularValor(entrada, v.tipo);
               
               const isSelecionado = saidaSelecionada === v.id;
               

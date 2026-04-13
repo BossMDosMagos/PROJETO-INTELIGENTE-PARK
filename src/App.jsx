@@ -176,9 +176,11 @@ const CONFIG_PADRAO = {
 const SENHA_ADMIN = '1234';
 
 function App() {
-  const [tela, setTela] = useState('home'); // 'home', 'admin', 'login-admin', 'cadastro-mensalista'
-  const [usuarioAutenticado, setUsuarioAutenticado] = useState(null);
-  const [authCarregando, setAuthCarregando] = useState(true);
+  // ACESSO DIRETO AO ADMIN (SEM LOGIN)
+  const admin = { id: 'admin-local', email: 'admin@local', nivelAcesso: 'MASTER' };
+  const [tela, setTela] = useState('home'); // Abre no painel operacional
+  const [usuarioAutenticado, setUsuarioAutenticado] = useState(admin);
+  const [authCarregando, setAuthCarregando] = useState(false); // Já carregado - acesso direto
   const [abaHome, setAbaHome] = useState('patio'); // 'patio', 'saidas', 'saida-placa', 'mensalistas'
   const [abaAdmin, setAbaAdmin] = useState('home'); // 'home', 'config', 'historico', 'mensalistas'
   const [modoCadastroPublico, setModoCadastroPublico] = useState(false); // True se acessado via link público
@@ -1796,26 +1798,15 @@ ${'='.repeat(50)}
       return;
     }
 
-    // 2. Fallback para senha local (Legado)
-    if (senhaInput === 'Senha@123' || senhaInput === '123456') {
-      const emailLower = String(emailInput).toLowerCase();
-      if (emailLower === 'master' || emailLower === 'admin' || emailLower.includes('master') || emailLower.includes('admin')) {
-        const adminUser = { id: 'admin-local', email: 'admin@local', nivelAcesso: 'MASTER' };
-        setUsuarioAutenticado(adminUser);
-        setTela('admin');
-        setSenhaInput('');
-        showToast('Acesso MASTER concedido!', 'success');
-      } else if (senhaInput === '123456') {
-        const adminUser = { id: 'admin-local', email: 'admin@local', nivelAcesso: 'MASTER' };
-        setUsuarioAutenticado(adminUser);
-        setTela('admin');
-        setSenhaInput('');
-        showToast('Acesso MASTER concedido!', 'success');
-      } else {
-        showToast('Usuário não reconhecido. Use: master', 'warning');
-      }
-    } else {
-      showToast('Preencha email e senha ou a senha de admin local!', 'error');
+    // QUALQUER LOGIN COM SENHA 123456 DÁ ACESSO MASTER
+    if (senhaInput === '123456') {
+      const adminUser = { id: 'admin-local', email: 'master@park.com', nivelAcesso: 'MASTER' };
+      setUsuarioAutenticado(adminUser);
+      setTela('admin');
+      setSenhaInput('');
+      showToast('Login MASTER OK!', 'success');
+    } else if (senhaInput) {
+      showToast('Senha errada. Use: 123456', 'error');
     }
   };
 
@@ -2809,120 +2800,11 @@ ${'='.repeat(50)}
     );
   }
 
-  if (!usuarioAutenticado) {
-    return (
-      <div className="min-h-screen bg-[#020617] text-gray-100 font-sans transition-colors duration-300">
-        <div className="flex items-center justify-center min-h-screen p-4 relative overflow-hidden">
-          {/* Background Effects */}
-          <div className="absolute inset-0 bg-[#020617]"></div>
-          <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-cyan-900/20 blur-[120px]"></div>
-          <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] rounded-full bg-blue-900/20 blur-[120px]"></div>
-          
-          <div className="w-full max-w-md bg-[#0F172A]/40 backdrop-blur-xl rounded-2xl shadow-[0_0_50px_rgba(0,0,0,0.5)] border border-white/10 p-8 relative z-10 animate-fade-in-up">
-            <div className="text-center mb-8">
-              {config.logoUrl ? (
-                <div className="w-24 h-24 mx-auto mb-4 relative group">
-                   <div className="absolute inset-0 bg-cyan-500/20 rounded-2xl blur-xl group-hover:blur-2xl transition-all duration-500"></div>
-                   <img 
-                    src={config.logoUrl} 
-                    alt="Logo Empresa" 
-                    className="w-full h-full object-contain relative z-10 drop-shadow-2xl transform hover:scale-105 transition-transform duration-500"
-                   />
-                </div>
-              ) : (
-                <div className="w-20 h-20 bg-gradient-to-br from-cyan-900 to-cyan-500 rounded-2xl mx-auto flex items-center justify-center shadow-[0_0_20px_rgba(34,211,238,0.4)] mb-4 transform rotate-3 hover:rotate-6 transition-transform duration-500">
-                  <span className="text-4xl font-black text-white tracking-tighter">
-                    {config.nomeEmpresa ? config.nomeEmpresa.charAt(0).toUpperCase() : 'C'}
-                  </span>
-                </div>
-              )}
-              
-              <h1 className="text-3xl font-bold text-white mb-2 tracking-tight uppercase">
-                {config.nomeEmpresa || 'COMMAND PARK'}
-              </h1>
-              
-              {config.cnpj && (
-                <p className="text-gray-400 text-xs font-mono mb-1 tracking-wider">
-                  CNPJ: {formatarCNPJ(config.cnpj)}
-                </p>
-              )}
-              
-              <p className="text-cyan-400 text-sm font-medium tracking-widest uppercase mt-2">
-                Security Protocol v3.0
-              </p>
-            </div>
-
-            <div className="space-y-6">
-              <div>
-                <label className="block text-sm font-bold text-gray-400 mb-2 uppercase tracking-wider">Usuário</label>
-                <div className="relative group">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <User className="h-5 w-5 text-gray-500 group-focus-within:text-cyan-400 transition-colors" />
-                  </div>
-                  <input
-                    type="email"
-                    value={emailInput}
-                    onChange={(e) => setEmailInput(e.target.value)}
-                    className="block w-full pl-12 pr-4 py-4 bg-[#0F172A]/50 border border-gray-700 rounded-xl text-white placeholder-gray-600 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-all font-mono text-lg"
-                    placeholder=""
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-bold text-gray-400 mb-2 uppercase tracking-wider">Senha de Acesso</label>
-                <div className="relative group">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <Lock className="h-5 w-5 text-gray-500 group-focus-within:text-cyan-400 transition-colors" />
-                  </div>
-                  <input
-                    type="password"
-                    value={senhaInput}
-                    onChange={(e) => setSenhaInput(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && fazerLogin()}
-                    className="block w-full pl-12 pr-4 py-4 bg-[#0F172A]/50 border border-gray-700 rounded-xl text-white placeholder-gray-600 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-all font-mono text-lg"
-                    placeholder="••••••••"
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center">
-                <input
-                  id="lembrar-login"
-                  type="checkbox"
-                  checked={lembrarLogin}
-                  onChange={(e) => setLembrarLogin(e.target.checked)}
-                  className="w-4 h-4 rounded border-gray-600 bg-[#0F172A] text-cyan-400 focus:ring-cyan-400 focus:ring-offset-0"
-                />
-                <label htmlFor="lembrar-login" className="ml-2 text-sm text-gray-400 cursor-pointer select-none">
-                  Lembrar de mim
-                </label>
-              </div>
-
-              <button
-                onClick={fazerLogin}
-                className="w-full bg-gradient-to-r from-cyan-700 to-blue-600 hover:from-cyan-600 hover:to-blue-500 text-white font-bold py-3.5 px-4 rounded-xl shadow-[0_0_20px_rgba(34,211,238,0.3)] hover:shadow-[0_0_30px_rgba(34,211,238,0.5)] transform hover:-translate-y-0.5 transition-all duration-300 uppercase tracking-wider text-sm flex items-center justify-center gap-2"
-              >
-                <LogIn size={18} />
-                Acessar Sistema
-              </button>
-            </div>
-            
-            <div className="mt-8 text-center">
-              <p className="text-xs text-gray-500">© 2026 Command Park Solutions. Todos os direitos reservados.</p>
-            </div>
-          </div>
-        </div>
-        {renderToasts()}
-      </div>
-    );
-  }
-
   // TELA HOME (OPERACIONAL)
   const isMaster = String(usuarioAutenticado?.nivelAcesso || '').toUpperCase() === 'MASTER';
 
   return (
-    <div className="bg-[#050A14] text-gray-100" style={{ display: 'flex', height: '100vh', width: '100vw', overflow: 'hidden' }}>
+    <div className="bg-[#050A14] text-gray-100" style={{ display: 'flex', height: '100vh', width: '100vw', overflow: 'auto' }}>
       {/* NAVBAR SUPERIOR - SEMPRE NO TOPO */}
       <TopBarSimplificada
         config={config}
@@ -2955,7 +2837,7 @@ ${'='.repeat(50)}
         )}
 
         {/* ÁREA DE CONTEÚDO */}
-        <div style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+        <div style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', height: '100%', overflow: 'auto' }}>
           <ProLayout
             unidades={unidadesMapa.length > 0 ? unidadesMapa : [{
               id: 'default',
