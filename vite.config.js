@@ -6,24 +6,16 @@ export default defineConfig({
   plugins: [
     react()
   ],
-  server: {
-    port: 3000
-  },
+  root: '.',
   build: {
-    // Desabilitar code splitting para evitar erros de import dinâmico
+    outDir: 'dist',
+    minify: false,
+    sourcemap: false,
     rollupOptions: {
-      output: {
-        manualChunks: undefined
-      }
-    },
-    minify: true,
-    target: 'esnext',
-    chunkSizeWarningLimit: 1500,
-    sourcemap: false, // Desabilitar sourcemap para evitar erros de path
-    cssMinify: true
+      input: './index.html'
+    }
   },
   optimize: {
-    // Pre-bundle dependencies
     include: ['react', 'react-dom', 'framer-motion', 'lucide-react']
   }
 });
