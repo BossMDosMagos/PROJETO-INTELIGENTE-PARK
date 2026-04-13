@@ -38,12 +38,9 @@ function git { & $gitPath @args }
 # Verificar se há mudanças não commitadas
 $status = git status --porcelain
 if ($status) {
-    Write-Host "⚠️  Você tem mudanças não commitadas. Deseja continuar? (S/N)" -ForegroundColor Yellow
-    $response = Read-Host
-    if ($response -ne 'S' -and $response -ne 's') {
-        Write-Host "❌ Deploy cancelado." -ForegroundColor Red
-        exit 1
-    }
+    Write-Host "⚠️  Forces commitando mudanças..." -ForegroundColor Yellow
+    git add -A
+    git commit -m "Update before deploy" --allow-empty
 }
 
 # Verificar se a pasta dist existe
@@ -61,8 +58,11 @@ Write-Host "📍 Branch atual: $currentBranch" -ForegroundColor Gray
 # Criar/atualizar branch gh-pages
 $ghPagesBranchExists = git show-ref --verify --quiet refs/heads/gh-pages
 if ($LASTEXITCODE -eq 0) {
-    Write-Host "🔄 Branch gh-pages existe, atualizando..." -ForegroundColor Cyan
+    Write-Host "🔄 Branch gh-pages existe, forçando rebuild..." -ForegroundColor Cyan
     git checkout gh-pages
+    # Forçar hard reset para limpar cache antigo
+    git reset --hard HEAD
+    git clean -fdx
 } else {
     Write-Host "🆕 Criando branch gh-pages..." -ForegroundColor Cyan
     git checkout --orphan gh-pages
