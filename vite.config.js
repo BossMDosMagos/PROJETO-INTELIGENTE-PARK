@@ -10,16 +10,16 @@ export default defineConfig({
     port: 3000
   },
   build: {
-    // Desabilitar code splitting para evitar erros de import dinâmico no PWA
+    // Desabilitar code splitting para evitar erros de import dinâmico
     rollupOptions: {
       output: {
         manualChunks: undefined
       }
     },
-    minify: false,
+    minify: true,
     target: 'esnext',
     chunkSizeWarningLimit: 1500,
-    sourcemap: true,
+    sourcemap: false, // Desabilitar sourcemap para evitar erros de path
     cssMinify: true
   },
   optimize: {
