@@ -6,16 +6,15 @@ export default defineConfig({
   plugins: [
     react()
   ],
-  root: '.',
   build: {
     outDir: 'dist',
     minify: false,
     sourcemap: false,
     rollupOptions: {
-      input: './index.html'
+      output: {
+        // Force everything into single chunk
+        manualChunks: () => 'bundle'
+      }
     }
-  },
-  optimize: {
-    include: ['react', 'react-dom', 'framer-motion', 'lucide-react']
   }
 });

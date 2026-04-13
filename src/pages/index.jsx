@@ -1,13 +1,16 @@
 /**
- * Lazy-loaded Pages für Código Splitting
- * - Code splitting automático para páginas principais
- * - Fallback loading animation
- * - Error boundaries para falhas de carregamento
+ * Pages - Sem lazy loading para evitar erros de build no GitHub Pages
  */
 
 import React, { Suspense } from 'react';
 import { LoadingAnimation } from '../components/AnimationManager';
 import DESIGN from '../design-system';
+
+// Direct imports - sem lazy loading
+import { PaginaCadastroPublico } from '../PaginaCadastroPublico';
+import { PaginaCadastroMensalista } from '../components/PaginaCadastroMensalista';
+import PaginaLogin from '../components/PaginaLogin';
+import { AbaSolicitacoesMensalistas } from '../components/AbaSolicitacoesMensalistas';
 
 // Fallback Loading Component
 const PageLoadingFallback = () => (
@@ -102,24 +105,13 @@ class PageErrorBoundary extends React.Component {
   }
 }
 
-// Lazy Pages
-export const PaginaCadastroPublicoLazy = React.lazy(() =>
-  import('../PaginaCadastroPublico').then(m => ({ default: m.PaginaCadastroPublico }))
-);
+// Direct exports - no lazy loading
+export const PaginaCadastroPublicoLazy = PaginaCadastroPublico;
+export const PaginaCadastroMensalistaLazy = PaginaCadastroMensalista;
+export const PaginaLoginLazy = PaginaLogin;
+export const AbaSolicitacoesMensalistasLazy = AbaSolicitacoesMensalistas;
 
-export const PaginaCadastroMensalistaLazy = React.lazy(() =>
-  import('../components/PaginaCadastroMensalista').then(m => ({ default: m.PaginaCadastroMensalista }))
-);
-
-export const PaginaLoginLazy = React.lazy(() =>
-  import('../components/PaginaLogin').then(m => ({ default: m.PaginaLogin }))
-);
-
-export const AbaSolicitacoesMensalistasLazy = React.lazy(() =>
-  import('../components/AbaSolicitacoesMensalistas').then(m => ({ default: m.AbaSolicitacoesMensalistas }))
-);
-
-// Wrapper para carregar páginas lazy com suspense
+// Wrapper para carregar páginas com suspense
 export const LazyPage = ({ component: Component, fallback = <PageLoadingFallback />, ...props }) => (
   <PageErrorBoundary>
     <Suspense fallback={fallback}>
@@ -128,18 +120,8 @@ export const LazyPage = ({ component: Component, fallback = <PageLoadingFallback
   </PageErrorBoundary>
 );
 
-// Preload pages on hover (performance optimization)
+// Preload function - simplified to avoid dynamic imports
 export const prefetchPages = () => {
-  // Preload on mouseenter ou touch
-  if ('requestIdleCallback' in window) {
-    requestIdleCallback(() => {
-      // Preload main pages after loading completes
-      setTimeout(() => {
-        // These will be imported into memory
-        import('../PaginaCadastroPublico');
-        import('../components/PaginaCadastroMensalista');
-        import('../components/PaginaLogin');
-      }, 2000);
-    });
-  }
+  // Pages are already loaded directly, no need to preload
+  console.log('Pages loaded');
 };
