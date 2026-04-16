@@ -1,0 +1,29 @@
+{
+  "projectId": "",
+  "api": {
+    "port": 54321,
+    "schemas": ["public", "auth", "storage"]
+  },
+  "db": {
+    "port": 54322,
+    "majorVersion": 15
+  },
+  "studio": {
+    "port": 54323,
+    "enabled": true
+  },
+  "inbucket": {
+    "port": 54324,
+    "enabled": true
+  },
+  "realtime": {
+    "enabled": true,
+    "maxConnections": 100,
+    "maxEvents": 50,
+    "maxBytes": 1048576
+  },
+  "edge_runtime": {
+    "policy": "per_request",
+    "main_service_path": "supabase/functions"
+  }
+}

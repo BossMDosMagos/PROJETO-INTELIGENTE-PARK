@@ -1,0 +1,123 @@
+/* Importar estilos responsivos */
+@import './responsive.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html, body {
+    @apply bg-[#050A14] text-gray-100;
+    overflow: hidden;
+    height: 100%;
+  }
+}
+
+@keyframes pulse-vermelho {
+  0%, 100% {
+    opacity: 1;
+    text-shadow: 0 0 10px rgba(239, 68, 68, 0.8);
+  }
+  50% {
+    opacity: 0.7;
+    text-shadow: 0 0 20px rgba(239, 68, 68, 1);
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-[#064E3B] hover:bg-[#10B981] text-white font-semibold py-3 px-6 rounded-lg shadow-[0_0_15px_rgba(6,78,59,0.5)] border border-[#10B981]/30 transition-all duration-300 hover:shadow-[0_0_25px_rgba(16,185,129,0.6)] active:scale-95 uppercase tracking-wider text-sm;
+  }
+  
+  .btn-secondary {
+    @apply bg-[#1E293B]/80 hover:bg-[#1E293B] text-gray-200 font-semibold py-3 px-6 rounded-lg border border-white/10 hover:border-[#10B981]/50 shadow-md transition-all duration-300 active:scale-95 uppercase tracking-wider text-sm backdrop-blur-sm;
+  }
+  
+  .btn-danger {
+    @apply bg-red-900/80 hover:bg-red-700 text-white font-semibold py-3 px-6 rounded-lg border border-red-500/30 shadow-[0_0_15px_rgba(153,27,27,0.4)] transition-all duration-300 active:scale-95 uppercase tracking-wider text-sm;
+  }
+  
+  .card {
+    @apply bg-[#1E293B]/70 rounded-xl shadow-2xl p-6 border border-white/5 backdrop-blur-xl;
+  }
+  
+  .input-field {
+    @apply w-full px-4 py-3 text-lg bg-[#0B1120] text-gray-100 border border-white/10 rounded-lg focus:outline-none focus:border-[#10B981] focus:shadow-[0_0_10px_rgba(16,185,129,0.3)] transition-all duration-300 placeholder-gray-600;
+  }
+  
+  .input-field:-webkit-autofill,
+  .input-field:-webkit-autofill:hover,
+  .input-field:-webkit-autofill:focus {
+    -webkit-box-shadow: 0 0 0 1000px #0B1120 inset !important;
+    -webkit-text-fill-color: white !important;
+    caret-color: white !important;
+  }
+}
+
+/* Input Visual de Placa */
+.input-placa-container {
+  position: relative;
+  width: 280px;
+  height: 80px;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+}
+
+.input-placa-container.mercosul {
+  background-image: url('/img/NOVA.png');
+}
+
+.input-placa-container.antiga {
+  background-image: url('/img/ANTIGA.png');
+}
+
+.input-placa {
+  background: transparent !important;
+  border: none !important;
+  outline: none !important;
+  font-size: 28px;
+  font-weight: bold;
+  letter-spacing: 4px;
+  text-align: center;
+  color: #1a1a1a;
+  width: 230px;
+  height: 50px;
+  caret-color: #1a1a1a;
+}
+
+.input-placa::placeholder {
+  color: #666;
+  opacity: 0.5;
+}
+
+/* Fonte Mercosul */
+.fonte-mercosul {
+  font-family: 'FE-Schrift', 'Arial Black', sans-serif !important;
+  font-weight: normal !important;
+}
+
+/* Fonte Placa Antiga */
+.fonte-antiga {
+  font-family: 'Mandatory', 'Impact', sans-serif !important;
+  font-weight: normal !important;
+}
+
+/* Definição das fontes das placas */
+@font-face {
+  font-family: 'FE-Schrift';
+  src: url('/fonts/FE-Schrift.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Mandatory';
+  src: url('/fonts/Mandatory.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+}
